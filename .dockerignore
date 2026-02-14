@@ -1,0 +1,25 @@
+# Exclude build artifacts and directories
+build/
+out/
+.gradle/
+.idea/
+.vscode/
+
+# Exclude version control and operating system files
+.git/
+.gitignore
+.DS_Store
+Thumbs.db
+
+# Exclude temporary files and logs
+tmp/
+logs/
+**/*.log*
+
+# Exclude Gradle wrapper and properties (if you copy the whole context and then run a specific command inside)
+gradlew
+gradlew.bat
+gradle-wrapper.jar
+
+# Other potential exclusions
+*.iml
