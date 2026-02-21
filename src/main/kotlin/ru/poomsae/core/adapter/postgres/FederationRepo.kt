@@ -15,7 +15,7 @@ class PostgresFederationRepo(private val db: JdbcTemplate) : FederationRepo {
 
   override fun Get(id: Long): Federation? {
     return db.query(
-            "SELECT id, name * FROM federations WEHRE id = ?",
+            "SELECT id, name FROM federations WEHRE id = ?",
             rowMapper,
             id,
         )
