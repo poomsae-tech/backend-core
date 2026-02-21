@@ -1,6 +1,6 @@
 package ru.poomsae.core
 
-interface FederationRepo {
+interface FederationService {
   fun Get(id: Long): Federation?
 
   fun GetMany(): List<Federation>
