@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  db:
+    restart: always
+    image: postgres:17
+    env_file:
+      - ./.env
+    ports:
+      - 5436:5432
+    environment:
+      PGUSER: ${POSTGRES_USER}
+      PGDATABASE: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

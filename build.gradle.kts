@@ -18,12 +18,16 @@ repositories { mavenCentral() }
 
 dependencies {
   // implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-  implementation("org.springframework.boot:spring-boot-starter-webmvc")
+  implementation("org.springframework.boot:spring-boot-starter-jdbc")
+  implementation("org.springframework.boot:spring-boot-starter-flyway")
+  implementation("org.flywaydb:flyway-database-postgresql")
+
+  implementation("org.springframework.boot:spring-boot-starter-web")
   implementation("org.jetbrains.kotlin:kotlin-reflect")
   implementation("tools.jackson.module:jackson-module-kotlin")
-  // runtimeOnly("org.postgresql:postgresql")
-  testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
-  testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+
+  runtimeOnly("org.postgresql:postgresql")
+  testImplementation("org.springframework.boot:spring-boot-starter-test")
   testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -41,3 +45,14 @@ allOpen {
 }
 
 tasks.withType<Test> { useJUnitPlatform() }
+
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+  val envFile = file(".env")
+  if (envFile.exists()) {
+    envFile
+        .readLines()
+        .filter { it.isNotBlank() && !it.startsWith("#") }
+        .map { it.split("=", limit = 2) }
+        .forEach { (key, value) -> environment(key, value) }
+  }
+}
