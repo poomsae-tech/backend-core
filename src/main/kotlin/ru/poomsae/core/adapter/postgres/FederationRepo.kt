@@ -39,8 +39,9 @@ class PostgresFederationRepo(private val db: JdbcTemplate) : FederationRepo {
 
   override fun Update(federation: Federation): Federation {
     db.update(
-        "UPDATE federations SET name = ?",
+        "UPDATE federations SET name = ? WHERE id = ?",
         federation.name,
+        federation.id,
     )
     return federation
   }
