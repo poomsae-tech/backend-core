@@ -1,0 +1,344 @@
+version: 1
+metadata:
+  name: Taekwondo - Authentication Flows
+  labels:
+    blueprints.goauthentik.io/description: "Login, password change and password reset flows"
+
+# Flow overview:
+#   taekwondo-login           → identification → password → session
+#   taekwondo-password-change → prompt (new password + repeat) → write
+#   taekwondo-password-reset  → identification → email link → prompt → write → auto-login
+
+entries:
+  # ═══════════════════════════════════════════════
+  # STAGES — Login flow
+  # ═══════════════════════════════════════════════
+
+  - model: authentik_stages_identification.identificationstage
+    id: login-identification-stage
+    state: present
+    identifiers:
+      name: taekwondo-identification-stage
+    attrs:
+      name: taekwondo-identification-stage
+      user_fields:
+        - email
+        - username
+      # Do not reveal whether the account exists — same error for unknown user
+      pretend_user_exists: true
+
+  - model: authentik_stages_password.passwordstage
+    id: login-password-stage
+    state: present
+    identifiers:
+      name: taekwondo-password-stage
+    attrs:
+      name: taekwondo-password-stage
+      backends:
+        - authentik.core.auth.InbuiltBackend
+      # Cancel the flow after 5 failed attempts to prevent brute-force
+      failed_attempts_before_cancel: 5
+
+  - model: authentik_stages_user_login.userloginstage
+    id: login-session-stage
+    state: present
+    identifiers:
+      name: taekwondo-login-stage
+    attrs:
+      name: taekwondo-login-stage
+
+  # ═══════════════════════════════════════════════
+  # STAGES — Password Change
+  # PromptStage is used (not PasswordStage) so validation_policies can be attached.
+  # PasswordStage only authenticates the *existing* password, it cannot validate new ones.
+  # ═══════════════════════════════════════════════
+
+  - model: authentik_stages_prompt.prompt
+    id: change-prompt-field-password
+    state: present
+    identifiers:
+      name: taekwondo-change-field-password
+    attrs:
+      name: taekwondo-change-field-password
+      field_key: password
+      label: "Новый пароль"
+      type: password
+      required: true
+      placeholder: "Введите новый пароль"
+      order: 0
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.prompt
+    id: change-prompt-field-password-repeat
+    state: present
+    identifiers:
+      name: taekwondo-change-field-password-repeat
+    attrs:
+      name: taekwondo-change-field-password-repeat
+      field_key: password_repeat
+      label: "Повторите пароль"
+      type: password
+      required: true
+      placeholder: "Повторите новый пароль"
+      order: 1
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.promptstage
+    id: change-prompt-stage
+    state: present
+    identifiers:
+      name: taekwondo-change-prompt-stage
+    attrs:
+      name: taekwondo-change-prompt-stage
+      fields:
+        - !KeyOf change-prompt-field-password
+        - !KeyOf change-prompt-field-password-repeat
+      # Attach password policy — validated before the stage completes
+      validation_policies:
+        - !Find [authentik_policies_password.passwordpolicy, [name, taekwondo-password-policy]]
+
+  - model: authentik_stages_user_write.userwritestage
+    id: change-write-stage
+    state: present
+    identifiers:
+      name: taekwondo-change-write-stage
+    attrs:
+      name: taekwondo-change-write-stage
+      # Never create a new user — only update the existing one
+      user_creation_mode: never_create
+
+  # ═══════════════════════════════════════════════
+  # STAGES — Password Reset
+  # ═══════════════════════════════════════════════
+
+  - model: authentik_stages_email.emailstage
+    id: reset-email-stage
+    state: present
+    identifiers:
+      name: taekwondo-reset-email-stage
+    attrs:
+      name: taekwondo-reset-email-stage
+      # SMTP settings are taken from global config (.env AUTHENTIK_EMAIL__* variables)
+      use_global_settings: true
+      # Link expires after 30 minutes
+      token_expiry: "minutes=30"
+      subject: "Восстановление пароля — Тхэквондо"
+      template: email/password_reset.html
+      # Activate the user account if it was not yet active
+      activate_user_on_success: true
+
+  - model: authentik_stages_prompt.prompt
+    id: reset-prompt-field-password
+    state: present
+    identifiers:
+      name: taekwondo-reset-field-password
+    attrs:
+      name: taekwondo-reset-field-password
+      field_key: password
+      label: "Новый пароль"
+      type: password
+      required: true
+      placeholder: "Введите новый пароль"
+      order: 0
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.prompt
+    id: reset-prompt-field-password-repeat
+    state: present
+    identifiers:
+      name: taekwondo-reset-field-password-repeat
+    attrs:
+      name: taekwondo-reset-field-password-repeat
+      field_key: password_repeat
+      label: "Повторите пароль"
+      type: password
+      required: true
+      placeholder: "Повторите новый пароль"
+      order: 1
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.promptstage
+    id: reset-prompt-stage
+    state: present
+    identifiers:
+      name: taekwondo-reset-prompt-stage
+    attrs:
+      name: taekwondo-reset-prompt-stage
+      fields:
+        - !KeyOf reset-prompt-field-password
+        - !KeyOf reset-prompt-field-password-repeat
+      validation_policies:
+        - !Find [authentik_policies_password.passwordpolicy, [name, taekwondo-password-policy]]
+
+  - model: authentik_stages_user_write.userwritestage
+    id: reset-write-stage
+    state: present
+    identifiers:
+      name: taekwondo-reset-write-stage
+    attrs:
+      name: taekwondo-reset-write-stage
+      user_creation_mode: never_create
+
+  - model: authentik_stages_user_login.userloginstage
+    id: reset-login-stage
+    state: present
+    identifiers:
+      name: taekwondo-reset-login-stage
+    attrs:
+      name: taekwondo-reset-login-stage
+
+  # ═══════════════════════════════════════════════
+  # FLOW 1: Authentication (Login)
+  # ═══════════════════════════════════════════════
+  - model: authentik_flows.flow
+    id: login-flow
+    state: present
+    identifiers:
+      slug: taekwondo-login
+    attrs:
+      name: Taekwondo Login
+      slug: taekwondo-login
+      title: "Вход в систему"
+      designation: authentication
+      authentication: none
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf login-flow
+      stage: !KeyOf login-identification-stage
+      order: 10
+    attrs:
+      target: !KeyOf login-flow
+      stage: !KeyOf login-identification-stage
+      order: 10
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf login-flow
+      stage: !KeyOf login-password-stage
+      order: 20
+    attrs:
+      target: !KeyOf login-flow
+      stage: !KeyOf login-password-stage
+      order: 20
+      re_evaluate_policies: true
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf login-flow
+      stage: !KeyOf login-session-stage
+      order: 100
+    attrs:
+      target: !KeyOf login-flow
+      stage: !KeyOf login-session-stage
+      order: 100
+
+  # ═══════════════════════════════════════════════
+  # FLOW 2: Password Change (authenticated users)
+  # ═══════════════════════════════════════════════
+  - model: authentik_flows.flow
+    id: change-flow
+    state: present
+    identifiers:
+      slug: taekwondo-password-change
+    attrs:
+      name: Taekwondo Password Change
+      slug: taekwondo-password-change
+      title: "Смена пароля"
+      designation: stage_configuration
+      authentication: require_authenticated
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf change-flow
+      stage: !KeyOf change-prompt-stage
+      order: 10
+    attrs:
+      target: !KeyOf change-flow
+      stage: !KeyOf change-prompt-stage
+      order: 10
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf change-flow
+      stage: !KeyOf change-write-stage
+      order: 20
+    attrs:
+      target: !KeyOf change-flow
+      stage: !KeyOf change-write-stage
+      order: 20
+
+  # ═══════════════════════════════════════════════
+  # FLOW 3: Password Reset (unauthenticated, via email link)
+  # ═══════════════════════════════════════════════
+  - model: authentik_flows.flow
+    id: reset-flow
+    state: present
+    identifiers:
+      slug: taekwondo-password-reset
+    attrs:
+      name: Taekwondo Password Reset
+      slug: taekwondo-password-reset
+      title: "Восстановление пароля"
+      designation: recovery
+      authentication: require_unauthenticated
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf reset-flow
+      stage: !KeyOf login-identification-stage
+      order: 10
+    attrs:
+      target: !KeyOf reset-flow
+      stage: !KeyOf login-identification-stage
+      order: 10
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf reset-flow
+      stage: !KeyOf reset-email-stage
+      order: 20
+    attrs:
+      target: !KeyOf reset-flow
+      stage: !KeyOf reset-email-stage
+      order: 20
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf reset-flow
+      stage: !KeyOf reset-prompt-stage
+      order: 30
+    attrs:
+      target: !KeyOf reset-flow
+      stage: !KeyOf reset-prompt-stage
+      order: 30
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf reset-flow
+      stage: !KeyOf reset-write-stage
+      order: 40
+    attrs:
+      target: !KeyOf reset-flow
+      stage: !KeyOf reset-write-stage
+      order: 40
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf reset-flow
+      stage: !KeyOf reset-login-stage
+      order: 50
+    attrs:
+      target: !KeyOf reset-flow
+      stage: !KeyOf reset-login-stage
+      order: 50
