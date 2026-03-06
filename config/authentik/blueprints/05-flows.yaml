@@ -5,7 +5,7 @@ metadata:
     blueprints.goauthentik.io/description: "Login, password change and password reset flows"
 
 # Flow overview:
-#   taekwondo-login           → identification → password → session
+#   taekwondo-login           → reputation (rate limit) → identification → password → session
 #   taekwondo-password-change → prompt (new password + repeat) → write
 #   taekwondo-password-reset  → identification → email link → prompt → write → auto-login
 
@@ -13,6 +13,20 @@ entries:
   # ═══════════════════════════════════════════════
   # STAGES — Login flow
   # ═══════════════════════════════════════════════
+
+  # Rate-limiting stage: tracks IP/username reputation.
+  # Each failed login decrements the score; when it drops below 0 the stage
+  # blocks the request until the score recovers (Authentik internal decay).
+  # Combined with PasswordStage.failed_attempts_before_cancel: 5 for per-session protection.
+  - model: authentik_stages_reputation.reputationstage
+    id: login-reputation-stage
+    state: present
+    identifiers:
+      name: taekwondo-reputation-stage
+    attrs:
+      name: taekwondo-reputation-stage
+      check_ip: true
+      check_user: true
 
   - model: authentik_stages_identification.identificationstage
     id: login-identification-stage
@@ -24,6 +38,7 @@ entries:
       user_fields:
         - email
         - username
+        - phone_number
       # Do not reveal whether the account exists — same error for unknown user
       pretend_user_exists: true
 
@@ -201,6 +216,18 @@ entries:
       title: "Вход в систему"
       designation: authentication
       authentication: none
+
+  # order 5 — reputation gate runs before identification
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf login-flow
+      stage: !KeyOf login-reputation-stage
+      order: 5
+    attrs:
+      target: !KeyOf login-flow
+      stage: !KeyOf login-reputation-stage
+      order: 5
 
   - model: authentik_flows.flowstagebinding
     state: present

@@ -226,3 +226,17 @@ gradle-app.setting
 /.idea/misc.xml
 /.idea/git_toolbox_blame.xml
 /.idea/git_toolbox_prj.xml
+
+# Authentik
+certs/authentik/data/
+certs/authentik/certs/
+
+certs/authentik/.env
+certs/authentik/*.env.local
+certs/authentik/*.env.production
+
+certs/authentik/.DS_Store
+certs/authentik/.idea/
+certs/authentik/*.iml
+certs/authentik/Thumbs.db
+

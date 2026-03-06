@@ -22,9 +22,9 @@ entries:
       name: taekwondo-web-provider
       client_type: confidential
       client_id: taekwondo-web
-      # IMPORTANT: Replace with a strong random value before production.
+      # Loaded from .env → TAEKWONDO_WEB_CLIENT_SECRET
       # Generate with: openssl rand -hex 32
-      client_secret: REPLACE_WITH_STRONG_SECRET
+      client_secret: !Env TAEKWONDO_WEB_CLIENT_SECRET
       # authorization_flow is REQUIRED. Using built-in implicit-consent flow
       # (no extra consent screen — suitable for first-party internal apps).
       authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
@@ -37,7 +37,8 @@ entries:
           matching_mode: strict
       # Token lifetimes — Python timedelta kwargs (semicolon-separated)
       access_token_validity: "minutes=5"
-      refresh_token_validity: "days=30"
+      # 7 days: long enough for mobile/web sessions, not excessively long
+      refresh_token_validity: "days=7"
       # Scope mappings resolved via !Find because they were created in 03-scope-mappings.yaml
       property_mappings:
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
@@ -71,7 +72,7 @@ entries:
         - url: "http://localhost:8081/auth/callback"
           matching_mode: strict
       access_token_validity: "minutes=5"
-      refresh_token_validity: "days=30"
+      refresh_token_validity: "days=7"
       property_mappings:
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, profile]]
