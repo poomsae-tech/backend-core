@@ -5,28 +5,43 @@ metadata:
     blueprints.goauthentik.io/description: "Login, password change and password reset flows"
 
 # Flow overview:
-#   taekwondo-login           → reputation (rate limit) → identification → password → session
+#   taekwondo-login           → deny (rate-limit gate) → identification → password → session
 #   taekwondo-password-change → prompt (new password + repeat) → write
 #   taekwondo-password-reset  → identification → email link → prompt → write → auto-login
+#
+# Rate limiting:
+#   ReputationPolicy (check_ip + check_username, threshold: -5) is bound to the DenyStage
+#   binding at order 5 with negate: true.
+#   - Reputation OK  (score >= threshold) → policy True  → negate → False → DenyStage skipped
+#   - Reputation bad (score <  threshold) → policy False → negate → True  → DenyStage shown → login denied
+#   Each failed login attempt is tracked by Authentik's reputation engine automatically.
 
 entries:
   # ═══════════════════════════════════════════════
   # STAGES — Login flow
   # ═══════════════════════════════════════════════
 
-  # Rate-limiting stage: tracks IP/username reputation.
-  # Each failed login decrements the score; when it drops below 0 the stage
-  # blocks the request until the score recovers (Authentik internal decay).
-  # Combined with PasswordStage.failed_attempts_before_cancel: 5 for per-session protection.
-  - model: authentik_stages_reputation.reputationstage
-    id: login-reputation-stage
+  # Shown only when reputation is too low (see PolicyBinding below).
+  - model: authentik_stages_deny.denystage
+    id: login-deny-stage
     state: present
     identifiers:
-      name: taekwondo-reputation-stage
+      name: taekwondo-deny-stage
     attrs:
-      name: taekwondo-reputation-stage
+      name: taekwondo-deny-stage
+
+  # Blocks IPs / usernames that accumulated too many failed login attempts.
+  # threshold: -5 → IP must fail 5 times before being blocked.
+  - model: authentik_policies_reputation.reputationpolicy
+    id: login-reputation-policy
+    state: present
+    identifiers:
+      name: taekwondo-reputation-policy
+    attrs:
+      name: taekwondo-reputation-policy
       check_ip: true
-      check_user: true
+      check_username: true
+      threshold: -5
 
   - model: authentik_stages_identification.identificationstage
     id: login-identification-stage
@@ -38,7 +53,6 @@ entries:
       user_fields:
         - email
         - username
-        - phone_number
       # Do not reveal whether the account exists — same error for unknown user
       pretend_user_exists: true
 
@@ -217,16 +231,18 @@ entries:
       designation: authentication
       authentication: none
 
-  # order 5 — reputation gate runs before identification
+  # order 5 — DenyStage gate; runs before identification.
+  # The ReputationPolicy is bound to this binding with negate: true (see below).
   - model: authentik_flows.flowstagebinding
+    id: login-deny-binding
     state: present
     identifiers:
       target: !KeyOf login-flow
-      stage: !KeyOf login-reputation-stage
+      stage: !KeyOf login-deny-stage
       order: 5
     attrs:
       target: !KeyOf login-flow
-      stage: !KeyOf login-reputation-stage
+      stage: !KeyOf login-deny-stage
       order: 5
 
   - model: authentik_flows.flowstagebinding
@@ -239,6 +255,19 @@ entries:
       target: !KeyOf login-flow
       stage: !KeyOf login-identification-stage
       order: 10
+
+  # PolicyBinding: attach ReputationPolicy to the DenyStage binding.
+  # negate: true  → deny stage is shown only when reputation is BAD (policy returns False).
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      order: 0
+      target: !KeyOf login-deny-binding
+      policy: !KeyOf login-reputation-policy
+    attrs:
+      negate: true
+      enabled: true
+      timeout: 30
 
   - model: authentik_flows.flowstagebinding
     state: present

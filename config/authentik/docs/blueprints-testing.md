@@ -202,7 +202,7 @@ curl http://localhost:9000/application/o/taekwondo-web/jwks/ | python3 -m json.t
 
 | Flow | URL | Назначение |
 |---|---|---|
-| **Taekwondo Login** | `/if/flow/taekwondo-login/` | Вход по email / username / **номеру телефона** + пароль |
+| **Taekwondo Login** | `/if/flow/taekwondo-login/` | Вход по email / username + пароль |
 | **Taekwondo Password Change** | `/if/flow/taekwondo-password-change/` | Смена пароля (требует авторизации) |
 | **Taekwondo Password Reset** | `/if/flow/taekwondo-password-reset/` | Восстановление пароля по email |
 
@@ -213,17 +213,14 @@ Admin UI → **Flows → Flows** → три flow с префиксом `Taekwond
 ### Тест 1 — Вход
 
 1. Открыть http://localhost:9000/if/flow/taekwondo-login/
-2. Ввести email / username / номер телефона и пароль тестового пользователя
+2. Ввести email или username и пароль тестового пользователя
 3. Ожидаемый результат: успешный вход
 
-**Rate limiting (ReputationStage):** каждая неудачная попытка снижает репутационный счёт IP/пользователя; при счёте < 0 вход блокируется до восстановления.  
-**Защита от перебора (PasswordStage):** 5 неверных попыток в одной сессии → flow прерывается.  
-**pretend_user_exists:** несуществующий email/номер → то же сообщение об ошибке, что и для неверного пароля.
+**Rate limiting (DenyStage + ReputationPolicy):** после 5 неудачных попыток с одного IP (`threshold: -5`) вход блокируется — `DenyStage` показывает экран отказа.  
+**Защита от перебора (PasswordStage):** 5 неверных паролей в одной сессии → flow прерывается.  
+**pretend_user_exists:** несуществующий email → то же сообщение об ошибке, что и для неверного пароля.
 
-**Тест входа по номеру телефона:**
-1. Убедиться, что у пользователя в Admin UI → **Directory → Users** заполнено поле **Phone**.
-2. Ввести номер телефона в поле идентификации → ввести пароль.
-3. Ожидаемый результат: успешный вход.
+> **Ограничение:** В Authentik 2026.2.x вход по номеру телефона через `IdentificationStage` не поддерживается (`phone_number` не является валидным `UserField`). Номер телефона собирается при регистрации и хранится в `user.attributes.phone_number`.
 
 ### Тест 2 — Смена пароля
 
@@ -310,11 +307,12 @@ Admin UI → **Flows → Flows** → должны появиться два но
 [ ] Applications → Providers: есть taekwondo-web-provider, taekwondo-mobile-provider
 [ ] Applications → Applications: есть Taekwondo Web, Taekwondo Mobile
 [ ] Flows → Flows: есть 5 flows с префиксом Taekwondo (Login, Password Change, Password Reset, Athlete Enrollment, Club Enrollment)
-[ ] Flows → Stages: есть taekwondo-reputation-stage (ReputationStage)
+[ ] Flows → Stages: есть taekwondo-deny-stage (DenyStage)
+[ ] Policy → Policies: есть taekwondo-reputation-policy (ReputationPolicy, threshold: -5)
 [ ] http://localhost:9000/application/o/taekwondo-web/.well-known/openid-configuration — JSON
-[ ] http://localhost:9000/if/flow/taekwondo-login/ — форма входа принимает email / username / телефон
-[ ] Login flow: успешный вход по номеру телефона
-[ ] Rate limiting: после нескольких неудачных попыток IP блокируется
+[ ] http://localhost:9000/if/flow/taekwondo-login/ — форма входа принимает email / username
+[ ] Login flow: успешный вход тестового пользователя
+[ ] Rate limiting: после 5+ неудачных попыток с одного IP — DenyStage блокирует вход
 [ ] Password change flow: смена пароля с проверкой политики
 [ ] Enrollment athlete: регистрация создаёт неактивного пользователя + группа athlete
 [ ] Enrollment club: регистрация создаёт неактивного org_admin + атрибут club_name

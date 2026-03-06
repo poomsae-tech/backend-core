@@ -155,7 +155,7 @@ entries:
       use_global_settings: true
       token_expiry: "hours=12"
       subject: "Подтверждение регистрации — Тхэквондо"
-      template: email/setup.html
+      template: email/account_confirmation.html
       activate_user_on_success: false
 
   # ═══════════════════════════════════════════════
@@ -309,7 +309,7 @@ entries:
       use_global_settings: true
       token_expiry: "hours=12"
       subject: "Подтверждение заявки на регистрацию клуба — Тхэквондо"
-      template: email/setup.html
+      template: email/account_confirmation.html
       activate_user_on_success: false
 
   # ═══════════════════════════════════════════════

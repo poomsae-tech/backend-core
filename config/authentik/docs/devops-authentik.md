@@ -300,7 +300,14 @@ URL: `/if/flow/taekwondo-enroll-club/`
 
 ### Rate limiting при входе
 
-В flow `taekwondo-login` добавлена `ReputationStage` (порядок 5, до идентификации). Стадия отслеживает репутацию по IP-адресу и имени пользователя: каждая неудачная попытка уменьшает счёт; когда он падает ниже нуля — вход блокируется до восстановления репутации (встроенный механизм затухания Authentik). Дополнительно `PasswordStage` прерывает flow после 5 неверных попыток в рамках одной сессии.
+В flow `taekwondo-login` на порядке 5 (до идентификации) стоит `DenyStage` с привязанным `ReputationPolicy` (`check_ip: true`, `check_username: true`, `threshold: -5`, `negate: true`):
+
+- Репутация OK (score ≥ −5) → политика возвращает True → negate → False → `DenyStage` **пропускается**, flow продолжается.  
+- Репутация плохая (score < −5) → политика возвращает False → negate → True → `DenyStage` **показывается**, вход заблокирован.
+
+Каждый неудачный вход автоматически уменьшает счёт репутации на 1. Дополнительно `PasswordStage` прерывает flow после 5 неверных попыток в рамках одной сессии (`failed_attempts_before_cancel: 5`).
+
+> **Примечание по телефонному входу:** В Authentik 2026.2.x `IdentificationStage` поддерживает только `email`, `username` и `upn` как поля идентификации — поле `phone_number` не поддерживается нативно. Номер телефона собирается при регистрации (enrollment flow) и сохраняется в `user.attributes.phone_number`, но для входа используется email или username.
 
 ---
 
