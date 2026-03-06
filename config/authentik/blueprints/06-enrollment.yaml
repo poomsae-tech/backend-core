@@ -6,21 +6,82 @@ metadata:
     blueprints.goauthentik.io/depends-on: "Taekwondo - Groups and Roles"
 
 # Enrollment overview:
-#   taekwondo-enroll-athlete → prompt (phone + data) → write (inactive) → email confirm (12h)
-#   taekwondo-enroll-club    → prompt (club + data)  → write (inactive) → email confirm (12h)
+#   taekwondo-enroll-athlete → prompt (phone + data) → write (inactive) → SMS verify → email confirm (12h)
+#   taekwondo-enroll-club    → prompt (club + data)  → write (inactive) → SMS verify → email confirm (12h)
 #
-# After email confirmation the user account remains INACTIVE.
+# SMS verification (AuthenticatorSMSStage, verify_only: true):
+#   - Sends a one-time code to the phone number entered in the prompt.
+#   - verify_only: true — only a salted hash of the number is stored; no permanent SMSDevice created.
+#   - Provider: SMSC.ru (generic HTTP, credentials from .env → SMSC_LOGIN / SMSC_PASSWORD).
+#   - The SMSC mapping (NotificationWebhookMapping) builds the JSON body for the SMSC REST API.
+#
+# After SMS + email confirmation the user account remains INACTIVE.
 # Approval (activation) is performed manually:
 #   Athletes  — coach activates via Admin UI → Directory → Users
 #   Clubs     — federation_representative activates + assigns org_id attribute
 #
-# 12-hour window: the "confirm your email" link in the registration email
-# expires after 12 hours. If not clicked, the user must re-register.
+# 12-hour window: the "confirm your email" link expires after 12 hours.
 
 entries:
   # ═══════════════════════════════════════════════
+  # SMSC.ru SMS MAPPING
+  # NotificationWebhookMapping — formats the JSON payload for SMSC REST API.
+  # Available context variables: user, request, device, token, stage
+  #   stage.auth          → SMSC_LOGIN  (set in AuthenticatorSMSStage.auth)
+  #   stage.auth_password → SMSC_PASSWORD
+  #   stage.from_number   → SMSC_SENDER (sender name)
+  # ═══════════════════════════════════════════════
+  - model: authentik_events.notificationwebhookmapping
+    id: smsc-mapping
+    state: present
+    identifiers:
+      name: taekwondo-smsc-mapping
+    attrs:
+      name: taekwondo-smsc-mapping
+      expression: |
+        return {
+            "login":   stage.auth,
+            "psw":     stage.auth_password,
+            "phones":  device.phone_number,
+            "mes":     f"Код подтверждения Тхэквондо: {token}",
+            "sender":  stage.from_number,
+            "fmt":     3,
+            "charset": "utf-8",
+        }
+
+  # ═══════════════════════════════════════════════
+  # SMS VERIFICATION STAGE (shared by both enrollment flows)
+  # provider: generic  — POST JSON to SMSC REST endpoint
+  # account_sid        — target URL (SMSC send endpoint)
+  # auth               — SMSC login (from .env → SMSC_LOGIN)
+  # auth_password      — SMSC password (from .env → SMSC_PASSWORD)
+  # from_number        — registered sender name (from .env → SMSC_SENDER)
+  # auth_type: bearer  — adds Authorization: Bearer header; SMSC ignores it,
+  #                      credentials are passed inside the JSON body via the mapping.
+  # verify_only: true  — only a hash of the phone number is saved;
+  #                      no permanent SMSDevice is created.
+  # ═══════════════════════════════════════════════
+  - model: authentik_stages_authenticator_sms.authenticatorsmsstage
+    id: enroll-sms-stage
+    state: present
+    identifiers:
+      name: taekwondo-sms-verify-stage
+    attrs:
+      name: taekwondo-sms-verify-stage
+      provider: generic
+      account_sid: "https://smsc.ru/sys/send.php"
+      # !Env [VAR, default] — defaults to empty string when env var is not set.
+      # Fill in SMSC_LOGIN / SMSC_PASSWORD / SMSC_SENDER in .env before going to production.
+      auth: !Env [SMSC_LOGIN, ""]
+      auth_password: !Env [SMSC_PASSWORD, ""]
+      from_number: !Env [SMSC_SENDER, "Taekwondo"]
+      auth_type: bearer
+      verify_only: true
+      mapping: !Find [authentik_events.notificationwebhookmapping, [name, taekwondo-smsc-mapping]]
+  # ═══════════════════════════════════════════════
   # PROMPTS — Athlete Registration
   # ═══════════════════════════════════════════════
+
 
   - model: authentik_stages_prompt.prompt
     id: enroll-athlete-field-name
@@ -349,6 +410,18 @@ entries:
       stage: !KeyOf enroll-athlete-write-stage
       order: 20
 
+  # order 25 — phone number verification via SMS (SMSC.ru)
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf enroll-athlete-flow
+      stage: !KeyOf enroll-sms-stage
+      order: 25
+    attrs:
+      target: !KeyOf enroll-athlete-flow
+      stage: !KeyOf enroll-sms-stage
+      order: 25
+
   - model: authentik_flows.flowstagebinding
     state: present
     identifiers:
@@ -396,6 +469,18 @@ entries:
       target: !KeyOf enroll-club-flow
       stage: !KeyOf enroll-club-write-stage
       order: 20
+
+  # order 25 — phone number verification via SMS (shared SMS stage)
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf enroll-club-flow
+      stage: !KeyOf enroll-sms-stage
+      order: 25
+    attrs:
+      target: !KeyOf enroll-club-flow
+      stage: !KeyOf enroll-sms-stage
+      order: 25
 
   - model: authentik_flows.flowstagebinding
     state: present

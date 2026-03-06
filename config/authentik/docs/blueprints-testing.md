@@ -264,33 +264,46 @@ Admin UI → **Flows → Flows** → три flow с префиксом `Taekwond
 
 Admin UI → **Flows → Flows** → должны появиться два новых flow.
 
+### Перед тестированием enrollment flows
+
+Убедитесь, что в `.env` заданы реальные SMSC-credentials и SMTP настроен:
+
+```bash
+grep -E "SMSC_|AUTHENTIK_EMAIL" .env
+```
+
+Если используете MailHog для email и нет SMSC-аккаунта — для первоначального тестирования можно временно убрать SMS stage из flow в Admin UI (Flows → Flows → taekwondo-enroll-athlete → Stage Bindings → удалить order 25).
+
 ### Тест 1 — Регистрация спортсмена
 
 1. Открыть http://localhost:9000/if/flow/taekwondo-enroll-athlete/
-2. Заполнить форму: ФИО, логин, номер телефона, email, пароль.
-3. Нажать «Далее» → на email придёт письмо подтверждения.
-4. Перейти по ссылке из письма (ссылка действует **12 часов**).
+2. Заполнить форму: ФИО, логин, **номер телефона** (+7...), email, пароль.
+3. Нажать «Далее» → Authentik отправляет SMS с кодом через SMSC.ru.
+4. Ввести полученный код → SMS-верификация пройдена.
+5. На email приходит письмо подтверждения → перейти по ссылке (**12 часов**).
 
-**Ожидаемый результат после регистрации:**
+**Ожидаемый результат:**
 - Admin UI → **Directory → Users** → новый пользователь со статусом **Inactive** и группой `athlete`.
-- Поле `phone_number` заполнено.
+- `user.attributes.phone_number` заполнен.
 
 **Активация тренером:**
 - Admin UI → выбрать пользователя → поставить флаг **Active** → Save.
-- Только после этого пользователь может войти.
 
-**Тест истечения токена:**
-- Зарегистрировать пользователя → подождать более 12 часов (или изменить `token_expiry` на `minutes=1` для теста) → ссылка из письма должна вернуть ошибку "Token invalid or expired".
+**Тест ошибки SMS:**
+- Ввести некорректный код → форма показывает ошибку, код запрашивается повторно.
+
+**Тест истечения email-токена:**
+- Изменить `token_expiry` на `minutes=1` для теста → ссылка из письма должна вернуть ошибку «Token invalid or expired».
 
 ### Тест 2 — Регистрация клуба
 
 1. Открыть http://localhost:9000/if/flow/taekwondo-enroll-club/
 2. Заполнить форму: название клуба, ФИО, логин, телефон, email, пароль.
-3. Нажать «Далее» → подтвердить email по ссылке из письма (12 часов).
+3. SMS с кодом → ввести код → подтвердить email по ссылке (12 часов).
 
 **Ожидаемый результат:**
 - Admin UI → **Directory → Users** → новый пользователь со статусом **Inactive** и группой `org_admin`.
-- Admin UI → пользователь → **Attributes** → должен быть ключ `club_name` со значением из формы.
+- Admin UI → пользователь → **Attributes** → ключ `club_name` со значением из формы.
 
 **Активация представителем федерации:**
 1. Активировать аккаунт (флаг **Active**).
@@ -314,7 +327,9 @@ Admin UI → **Flows → Flows** → должны появиться два но
 [ ] Login flow: успешный вход тестового пользователя
 [ ] Rate limiting: после 5+ неудачных попыток с одного IP — DenyStage блокирует вход
 [ ] Password change flow: смена пароля с проверкой политики
-[ ] Enrollment athlete: регистрация создаёт неактивного пользователя + группа athlete
-[ ] Enrollment club: регистрация создаёт неактивного org_admin + атрибут club_name
+[ ] Enrollment athlete: регистрация → SMS-верификация → email-ссылка → неактивный пользователь + группа athlete
+[ ] Enrollment club: регистрация → SMS-верификация → email-ссылка → неактивный org_admin + атрибут club_name
+[ ] Customization → Property Mappings: есть taekwondo-smsc-mapping (NotificationWebhookMapping)
+[ ] Flows → Stages: есть taekwondo-sms-verify-stage (AuthenticatorSMSStage)
 [ ] Токен содержит claims: roles, org_id (если задан)
 ```

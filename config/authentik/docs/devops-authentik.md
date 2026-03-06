@@ -94,6 +94,9 @@ docker compose exec worker ak create_admin_group --password <пароль>
 | `AUTHENTIK_SECRET_KEY` | Да | Ключ шифрования. Минимум 50 символов. **Не менять после первого запуска.** |
 | `AUTHENTIK_ERROR_REPORTING__ENABLED` | Нет | Анонимные отчёты об ошибках (`true` / `false`) |
 | `TAEKWONDO_WEB_CLIENT_SECRET` | Да | `client_secret` для OIDC-провайдера `taekwondo-web`. Инжектируется в blueprint через `!Env`. Генерация: `openssl rand -hex 32` |
+| `SMSC_LOGIN` | Да (для SMS) | Логин аккаунта SMSC.ru |
+| `SMSC_PASSWORD` | Да (для SMS) | Пароль аккаунта SMSC.ru |
+| `SMSC_SENDER` | Нет (default: `Taekwondo`) | Имя отправителя SMS. До 11 латинских символов. Должно быть зарегистрировано в SMSC. |
 | `COMPOSE_PORT_HTTP` | Нет (default: `9000`) | Внешний HTTP-порт |
 | `COMPOSE_PORT_HTTPS` | Нет (default: `9443`) | Внешний HTTPS-порт |
 | `AUTHENTIK_EMAIL__*` | Нет | Настройки SMTP (см. ниже) |
@@ -281,11 +284,12 @@ URL: `/if/flow/taekwondo-enroll-athlete/`
 
 1. Спортсмен заполняет форму (ФИО, логин, **номер телефона**, email, пароль).
 2. Аккаунт создаётся в **неактивном** состоянии, автоматически добавляется в группу `athlete`.
-3. На email отправляется ссылка подтверждения — **действует 12 часов**.
-4. Спортсмен переходит по ссылке (подтверждает email); аккаунт остаётся неактивным.
-5. **Тренер активирует аккаунт вручную**: Admin UI → **Directory → Users** → выбрать пользователя → поставить флаг **Active**.
+3. **SMS-верификация телефона** — Authentik отправляет одноразовый код через SMSC.ru; спортсмен вводит код в форму.
+4. На email отправляется ссылка подтверждения — **действует 12 часов**.
+5. Спортсмен переходит по ссылке (подтверждает email); аккаунт остаётся неактивным.
+6. **Тренер активирует аккаунт вручную**: Admin UI → **Directory → Users** → выбрать пользователя → поставить флаг **Active**.
 
-> **Важно:** без активации тренером войти в систему невозможно, даже после подтверждения email.
+> **Важно:** без активации тренером войти в систему невозможно, даже после подтверждения телефона и email.
 
 ### Регистрация клуба
 
@@ -293,10 +297,48 @@ URL: `/if/flow/taekwondo-enroll-club/`
 
 1. Представитель клуба заполняет форму (название клуба, ФИО, логин, телефон, email, пароль).
 2. Аккаунт `org_admin` создаётся в **неактивном** состоянии; поле `club_name` сохраняется в `user.attributes.club_name`.
-3. Ссылка подтверждения email отправляется на указанный адрес — **действует 12 часов**.
-4. **Представитель федерации** проверяет данные и активирует аккаунт, после чего:
+3. **SMS-верификация телефона** — код на указанный номер через SMSC.ru.
+4. Ссылка подтверждения email отправляется на указанный адрес — **действует 12 часов**.
+5. **Представитель федерации** проверяет данные и активирует аккаунт, после чего:
    - Создаёт клуб в бэкенде (отдельный API-вызов).
    - Добавляет атрибут `org_id` пользователю через Admin UI → **Directory → Users** → **Attributes**.
+
+### Настройка SMSC.ru
+
+SMS-верификация номера телефона работает через провайдера [SMSC.ru](https://smsc.ru).
+
+**Шаги для подключения:**
+
+1. Зарегистрироваться на [smsc.ru](https://smsc.ru) и пополнить баланс.
+2. В настройках аккаунта SMSC получить **логин** и **пароль** (или создать отдельный субаккаунт).
+3. Зарегистрировать имя отправителя (Sender Name) в разделе «Имена отправителей» (до 11 латинских символов). Если не зарегистрировано — SMS придёт с номера SMSC.
+4. Обновить переменные в `.env`:
+
+```dotenv
+SMSC_LOGIN=your_smsc_login
+SMSC_PASSWORD=your_smsc_password
+SMSC_SENDER=Taekwondo
+```
+
+5. Пересоздать worker-контейнер для загрузки новых переменных:
+
+```bash
+docker compose up -d worker
+```
+
+> Worker worker читает `env_file` только при создании контейнера. `docker compose restart` **не перечитывает** `.env` — нужен `docker compose up -d`.
+
+**Как работает интеграция:**
+
+- Blueprint `06-enrollment.yaml` создаёт `NotificationWebhookMapping` (`taekwondo-smsc-mapping`), который формирует JSON-тело запроса к SMSC REST API.
+- `AuthenticatorSMSStage` отправляет POST `https://smsc.ru/sys/send.php` с credentials в теле запроса.
+- `verify_only: true` — по завершению верификации сохраняется только хэш номера телефона; постоянный `SMSDevice` для 2FA не создаётся.
+
+**Проверка отправки SMS:**
+
+Admin UI → **Flows → Stages** → `taekwondo-sms-verify-stage` → **Test** (требует тестового пользователя с заполненным `phone_number`).
+
+---
 
 ### Rate limiting при входе
 
@@ -369,6 +411,7 @@ docker compose exec postgresql pg_dump -U authentik authentik > backup_$(date +%
 - [ ] Сгенерированы уникальные `PG_PASS` и `AUTHENTIK_SECRET_KEY`
 - [ ] `AUTHENTIK_SECRET_KEY` сохранён в защищённом хранилище (Vault, AWS Secrets Manager и т.д.)
 - [ ] Сгенерирован `TAEKWONDO_WEB_CLIENT_SECRET` (`openssl rand -hex 32`) и добавлен в `.env`
+- [ ] Настроены `SMSC_LOGIN`, `SMSC_PASSWORD`, `SMSC_SENDER` в `.env`; проверена отправка SMS через enrollment flow
 - [ ] Настроен SMTP и проверена отправка тестового письма
 - [ ] Домен в Brands обновлён на реальный
 - [ ] Redirect URIs в провайдерах обновлены на production URL
