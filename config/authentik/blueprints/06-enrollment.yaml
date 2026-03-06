@@ -1,0 +1,494 @@
+version: 1
+metadata:
+  name: Taekwondo - Enrollment Flows
+  labels:
+    blueprints.goauthentik.io/description: "Self-registration for athletes and clubs with approval workflow"
+    blueprints.goauthentik.io/depends-on: "Taekwondo - Groups and Roles"
+
+# Enrollment overview:
+#   taekwondo-enroll-athlete → prompt (phone + data) → write (inactive) → SMS verify → email confirm (12h)
+#   taekwondo-enroll-club    → prompt (club + data)  → write (inactive) → SMS verify → email confirm (12h)
+#
+# SMS verification (AuthenticatorSMSStage, verify_only: true):
+#   - Sends a one-time code to the phone number entered in the prompt.
+#   - verify_only: true — only a salted hash of the number is stored; no permanent SMSDevice created.
+#   - Provider: SMSC.ru (generic HTTP, credentials from .env → SMSC_LOGIN / SMSC_PASSWORD).
+#   - The SMSC mapping (NotificationWebhookMapping) builds the JSON body for the SMSC REST API.
+#
+# After SMS + email confirmation the user account remains INACTIVE.
+# Approval (activation) is performed manually:
+#   Athletes  — coach activates via Admin UI → Directory → Users
+#   Clubs     — federation_representative activates + assigns org_id attribute
+#
+# 12-hour window: the "confirm your email" link expires after 12 hours.
+
+entries:
+  # ═══════════════════════════════════════════════
+  # SMSC.ru SMS MAPPING
+  # NotificationWebhookMapping — formats the JSON payload for SMSC REST API.
+  # Available context variables: user, request, device, token, stage
+  #   stage.auth          → SMSC_LOGIN  (set in AuthenticatorSMSStage.auth)
+  #   stage.auth_password → SMSC_PASSWORD
+  #   stage.from_number   → SMSC_SENDER (sender name)
+  # ═══════════════════════════════════════════════
+  - model: authentik_events.notificationwebhookmapping
+    id: smsc-mapping
+    state: present
+    identifiers:
+      name: taekwondo-smsc-mapping
+    attrs:
+      name: taekwondo-smsc-mapping
+      expression: |
+        return {
+            "login":   stage.auth,
+            "psw":     stage.auth_password,
+            "phones":  device.phone_number,
+            "mes":     f"Код подтверждения Тхэквондо: {token}",
+            "sender":  stage.from_number,
+            "fmt":     3,
+            "charset": "utf-8",
+        }
+
+  # ═══════════════════════════════════════════════
+  # SMS VERIFICATION STAGE (shared by both enrollment flows)
+  # provider: generic  — POST JSON to SMSC REST endpoint
+  # account_sid        — target URL (SMSC send endpoint)
+  # auth               — SMSC login (from .env → SMSC_LOGIN)
+  # auth_password      — SMSC password (from .env → SMSC_PASSWORD)
+  # from_number        — registered sender name (from .env → SMSC_SENDER)
+  # auth_type: bearer  — adds Authorization: Bearer header; SMSC ignores it,
+  #                      credentials are passed inside the JSON body via the mapping.
+  # verify_only: true  — only a hash of the phone number is saved;
+  #                      no permanent SMSDevice is created.
+  # ═══════════════════════════════════════════════
+  - model: authentik_stages_authenticator_sms.authenticatorsmsstage
+    id: enroll-sms-stage
+    state: present
+    identifiers:
+      name: taekwondo-sms-verify-stage
+    attrs:
+      name: taekwondo-sms-verify-stage
+      provider: generic
+      account_sid: "https://smsc.ru/sys/send.php"
+      # !Env [VAR, default] — defaults to empty string when env var is not set.
+      # Fill in SMSC_LOGIN / SMSC_PASSWORD / SMSC_SENDER in .env before going to production.
+      auth: !Env [SMSC_LOGIN, ""]
+      auth_password: !Env [SMSC_PASSWORD, ""]
+      from_number: !Env [SMSC_SENDER, "Taekwondo"]
+      auth_type: bearer
+      verify_only: true
+      mapping: !Find [authentik_events.notificationwebhookmapping, [name, taekwondo-smsc-mapping]]
+  # ═══════════════════════════════════════════════
+  # PROMPTS — Athlete Registration
+  # ═══════════════════════════════════════════════
+
+
+  - model: authentik_stages_prompt.prompt
+    id: enroll-athlete-field-name
+    state: present
+    identifiers:
+      name: taekwondo-enroll-athlete-field-name
+    attrs:
+      name: taekwondo-enroll-athlete-field-name
+      field_key: name
+      label: "Полное имя"
+      type: text
+      required: true
+      placeholder: "Иванов Иван Иванович"
+      order: 0
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.prompt
+    id: enroll-athlete-field-username
+    state: present
+    identifiers:
+      name: taekwondo-enroll-athlete-field-username
+    attrs:
+      name: taekwondo-enroll-athlete-field-username
+      field_key: username
+      label: "Логин"
+      type: username
+      required: true
+      placeholder: "ivanov_ivan"
+      order: 1
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.prompt
+    id: enroll-athlete-field-phone
+    state: present
+    identifiers:
+      name: taekwondo-enroll-athlete-field-phone
+    attrs:
+      name: taekwondo-enroll-athlete-field-phone
+      field_key: phone_number
+      label: "Номер телефона"
+      type: text
+      required: true
+      placeholder: "+7 (999) 123-45-67"
+      order: 2
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.prompt
+    id: enroll-athlete-field-email
+    state: present
+    identifiers:
+      name: taekwondo-enroll-athlete-field-email
+    attrs:
+      name: taekwondo-enroll-athlete-field-email
+      field_key: email
+      label: "Email"
+      type: email
+      required: true
+      placeholder: "ivan@example.com"
+      order: 3
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.prompt
+    id: enroll-athlete-field-password
+    state: present
+    identifiers:
+      name: taekwondo-enroll-athlete-field-password
+    attrs:
+      name: taekwondo-enroll-athlete-field-password
+      field_key: password
+      label: "Пароль"
+      type: password
+      required: true
+      placeholder: "Введите пароль"
+      order: 4
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.prompt
+    id: enroll-athlete-field-password-repeat
+    state: present
+    identifiers:
+      name: taekwondo-enroll-athlete-field-password-repeat
+    attrs:
+      name: taekwondo-enroll-athlete-field-password-repeat
+      field_key: password_repeat
+      label: "Повторите пароль"
+      type: password
+      required: true
+      placeholder: "Повторите пароль"
+      order: 5
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.promptstage
+    id: enroll-athlete-prompt-stage
+    state: present
+    identifiers:
+      name: taekwondo-enroll-athlete-prompt-stage
+    attrs:
+      name: taekwondo-enroll-athlete-prompt-stage
+      fields:
+        - !KeyOf enroll-athlete-field-name
+        - !KeyOf enroll-athlete-field-username
+        - !KeyOf enroll-athlete-field-phone
+        - !KeyOf enroll-athlete-field-email
+        - !KeyOf enroll-athlete-field-password
+        - !KeyOf enroll-athlete-field-password-repeat
+      validation_policies:
+        - !Find [authentik_policies_password.passwordpolicy, [name, taekwondo-password-policy]]
+
+  # Creates user in INACTIVE state and adds to the athlete group.
+  # Coach must activate via Admin UI → Directory → Users → (user) → is active.
+  - model: authentik_stages_user_write.userwritestage
+    id: enroll-athlete-write-stage
+    state: present
+    identifiers:
+      name: taekwondo-enroll-athlete-write-stage
+    attrs:
+      name: taekwondo-enroll-athlete-write-stage
+      user_creation_mode: always_create
+      create_users_as_inactive: true
+      create_users_group: !Find [authentik_core.group, [name, athlete]]
+
+  # Sends a "confirm your email" link that expires in 12 hours.
+  # activate_user_on_success: false — clicking the link does NOT activate the account;
+  # it only confirms email ownership. Coach activation is still required.
+  - model: authentik_stages_email.emailstage
+    id: enroll-athlete-email-stage
+    state: present
+    identifiers:
+      name: taekwondo-enroll-athlete-email-stage
+    attrs:
+      name: taekwondo-enroll-athlete-email-stage
+      use_global_settings: true
+      token_expiry: "hours=12"
+      subject: "Подтверждение регистрации — Тхэквондо"
+      template: email/account_confirmation.html
+      activate_user_on_success: false
+
+  # ═══════════════════════════════════════════════
+  # PROMPTS — Club Registration
+  # ═══════════════════════════════════════════════
+
+  - model: authentik_stages_prompt.prompt
+    id: enroll-club-field-club-name
+    state: present
+    identifiers:
+      name: taekwondo-enroll-club-field-club-name
+    attrs:
+      name: taekwondo-enroll-club-field-club-name
+      field_key: club_name
+      label: "Название клуба"
+      type: text
+      required: true
+      placeholder: "Тхэквондо Прогресс"
+      order: 0
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.prompt
+    id: enroll-club-field-name
+    state: present
+    identifiers:
+      name: taekwondo-enroll-club-field-name
+    attrs:
+      name: taekwondo-enroll-club-field-name
+      field_key: name
+      label: "Контактное лицо (ФИО)"
+      type: text
+      required: true
+      placeholder: "Петров Алексей Николаевич"
+      order: 1
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.prompt
+    id: enroll-club-field-username
+    state: present
+    identifiers:
+      name: taekwondo-enroll-club-field-username
+    attrs:
+      name: taekwondo-enroll-club-field-username
+      field_key: username
+      label: "Логин администратора клуба"
+      type: username
+      required: true
+      placeholder: "club_progress"
+      order: 2
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.prompt
+    id: enroll-club-field-phone
+    state: present
+    identifiers:
+      name: taekwondo-enroll-club-field-phone
+    attrs:
+      name: taekwondo-enroll-club-field-phone
+      field_key: phone_number
+      label: "Контактный телефон"
+      type: text
+      required: true
+      placeholder: "+7 (999) 123-45-67"
+      order: 3
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.prompt
+    id: enroll-club-field-email
+    state: present
+    identifiers:
+      name: taekwondo-enroll-club-field-email
+    attrs:
+      name: taekwondo-enroll-club-field-email
+      field_key: email
+      label: "Email клуба"
+      type: email
+      required: true
+      placeholder: "admin@club.ru"
+      order: 4
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.prompt
+    id: enroll-club-field-password
+    state: present
+    identifiers:
+      name: taekwondo-enroll-club-field-password
+    attrs:
+      name: taekwondo-enroll-club-field-password
+      field_key: password
+      label: "Пароль"
+      type: password
+      required: true
+      placeholder: "Введите пароль"
+      order: 5
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.prompt
+    id: enroll-club-field-password-repeat
+    state: present
+    identifiers:
+      name: taekwondo-enroll-club-field-password-repeat
+    attrs:
+      name: taekwondo-enroll-club-field-password-repeat
+      field_key: password_repeat
+      label: "Повторите пароль"
+      type: password
+      required: true
+      placeholder: "Повторите пароль"
+      order: 6
+      placeholder_expression: false
+
+  - model: authentik_stages_prompt.promptstage
+    id: enroll-club-prompt-stage
+    state: present
+    identifiers:
+      name: taekwondo-enroll-club-prompt-stage
+    attrs:
+      name: taekwondo-enroll-club-prompt-stage
+      fields:
+        - !KeyOf enroll-club-field-club-name
+        - !KeyOf enroll-club-field-name
+        - !KeyOf enroll-club-field-username
+        - !KeyOf enroll-club-field-phone
+        - !KeyOf enroll-club-field-email
+        - !KeyOf enroll-club-field-password
+        - !KeyOf enroll-club-field-password-repeat
+      validation_policies:
+        - !Find [authentik_policies_password.passwordpolicy, [name, taekwondo-password-policy]]
+
+  # Creates org_admin user in INACTIVE state.
+  # club_name is stored in user.attributes.club_name (non-standard field → attributes dict).
+  # federation_representative activates + sets org_id attribute via Admin UI.
+  - model: authentik_stages_user_write.userwritestage
+    id: enroll-club-write-stage
+    state: present
+    identifiers:
+      name: taekwondo-enroll-club-write-stage
+    attrs:
+      name: taekwondo-enroll-club-write-stage
+      user_creation_mode: always_create
+      create_users_as_inactive: true
+      create_users_group: !Find [authentik_core.group, [name, org_admin]]
+
+  - model: authentik_stages_email.emailstage
+    id: enroll-club-email-stage
+    state: present
+    identifiers:
+      name: taekwondo-enroll-club-email-stage
+    attrs:
+      name: taekwondo-enroll-club-email-stage
+      use_global_settings: true
+      token_expiry: "hours=12"
+      subject: "Подтверждение заявки на регистрацию клуба — Тхэквондо"
+      template: email/account_confirmation.html
+      activate_user_on_success: false
+
+  # ═══════════════════════════════════════════════
+  # FLOW 4: Athlete Enrollment (self-registration)
+  # ═══════════════════════════════════════════════
+  - model: authentik_flows.flow
+    id: enroll-athlete-flow
+    state: present
+    identifiers:
+      slug: taekwondo-enroll-athlete
+    attrs:
+      name: Taekwondo Athlete Enrollment
+      slug: taekwondo-enroll-athlete
+      title: "Регистрация спортсмена"
+      designation: enrollment
+      authentication: none
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf enroll-athlete-flow
+      stage: !KeyOf enroll-athlete-prompt-stage
+      order: 10
+    attrs:
+      target: !KeyOf enroll-athlete-flow
+      stage: !KeyOf enroll-athlete-prompt-stage
+      order: 10
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf enroll-athlete-flow
+      stage: !KeyOf enroll-athlete-write-stage
+      order: 20
+    attrs:
+      target: !KeyOf enroll-athlete-flow
+      stage: !KeyOf enroll-athlete-write-stage
+      order: 20
+
+  # order 25 — phone number verification via SMS (SMSC.ru)
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf enroll-athlete-flow
+      stage: !KeyOf enroll-sms-stage
+      order: 25
+    attrs:
+      target: !KeyOf enroll-athlete-flow
+      stage: !KeyOf enroll-sms-stage
+      order: 25
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf enroll-athlete-flow
+      stage: !KeyOf enroll-athlete-email-stage
+      order: 30
+    attrs:
+      target: !KeyOf enroll-athlete-flow
+      stage: !KeyOf enroll-athlete-email-stage
+      order: 30
+
+  # ═══════════════════════════════════════════════
+  # FLOW 5: Club Enrollment
+  # ═══════════════════════════════════════════════
+  - model: authentik_flows.flow
+    id: enroll-club-flow
+    state: present
+    identifiers:
+      slug: taekwondo-enroll-club
+    attrs:
+      name: Taekwondo Club Enrollment
+      slug: taekwondo-enroll-club
+      title: "Регистрация клуба"
+      designation: enrollment
+      authentication: none
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf enroll-club-flow
+      stage: !KeyOf enroll-club-prompt-stage
+      order: 10
+    attrs:
+      target: !KeyOf enroll-club-flow
+      stage: !KeyOf enroll-club-prompt-stage
+      order: 10
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf enroll-club-flow
+      stage: !KeyOf enroll-club-write-stage
+      order: 20
+    attrs:
+      target: !KeyOf enroll-club-flow
+      stage: !KeyOf enroll-club-write-stage
+      order: 20
+
+  # order 25 — phone number verification via SMS (shared SMS stage)
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf enroll-club-flow
+      stage: !KeyOf enroll-sms-stage
+      order: 25
+    attrs:
+      target: !KeyOf enroll-club-flow
+      stage: !KeyOf enroll-sms-stage
+      order: 25
+
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf enroll-club-flow
+      stage: !KeyOf enroll-club-email-stage
+      order: 30
+    attrs:
+      target: !KeyOf enroll-club-flow
+      stage: !KeyOf enroll-club-email-stage
+      order: 30
