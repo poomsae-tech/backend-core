@@ -1,4 +1,4 @@
-package ru.poomsae.core
+package ru.poomsae.core.driver.http.dto.responses
 
 data class FederationResponse(
     val id: Long,
