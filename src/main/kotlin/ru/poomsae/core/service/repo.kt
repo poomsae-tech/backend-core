@@ -1,13 +1,13 @@
 package ru.poomsae.core
 
 interface FederationRepo {
-  fun Get(id: Long): Federation?
+  fun get(id: Long): Federation?
 
-  fun GetMany(): List<Federation>
+  fun getMany(): List<Federation>
 
-  fun Create(federation: Federation): Federation
+  fun create(federation: Federation): Federation
 
-  fun Update(federation: Federation): Federation
+  fun update(federation: Federation): Federation
 
-  fun Delete(id: Long)
+  fun delete(id: Long)
 }

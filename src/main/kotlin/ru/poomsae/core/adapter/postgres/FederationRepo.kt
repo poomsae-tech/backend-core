@@ -1,52 +1,63 @@
 package ru.poomsae.core
 
-import java.sql.ResultSet
+import java.time.Instant
+import org.springframework.jdbc.core.BeanPropertyRowMapper
 import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.jdbc.core.RowMapper
 import org.springframework.stereotype.Repository
 
 @Repository
 class PostgresFederationRepo(private val db: JdbcTemplate) : FederationRepo {
 
-  private val rowMapper =
-      RowMapper<Federation> { rs: ResultSet, _ ->
-        Federation(id = rs.getLong("id"), name = rs.getString("name"))
-      }
+  private val rowMapper = BeanPropertyRowMapper(Federation::class.java)
 
-  override fun Get(id: Long): Federation? {
+  override fun get(id: Long): Federation? {
     return db.query(
-            "SELECT id, name FROM federations WEHRE id = ?",
+            "SELECT id, name, created_at, created_by, updated_at, updated_by, deleted FROM federations WHERE id = ? AND deleted = false",
             rowMapper,
             id,
         )
         .firstOrNull()
   }
 
-  override fun GetMany(): List<Federation> {
+  override fun getMany(): List<Federation> {
     return db.query(
-        "SELECT id, name FROM federations",
+        "SELECT id, name, created_at, created_by, updated_at, updated_by, deleted FROM federations WHERE deleted = false",
         rowMapper,
     )
   }
 
-  override fun Create(federation: Federation): Federation {
+  override fun create(federation: Federation): Federation {
     db.update(
-        "INSERT INTO federations (name) VALUES (?)",
+        "INSERT INTO federations (name, created_by, deleted) VALUES (?, ?, ?)",
         federation.name,
+        federation.createdBy,
+        federation.deleted,
     )
     return federation
   }
 
-  override fun Update(federation: Federation): Federation {
+  override fun update(federation: Federation): Federation {
+    val updatedFederation =
+        federation.copy(
+            updatedAt = Instant.now(),
+            updatedBy = 1, // TODO: заменить на реального пользователя
+        )
+    
     db.update(
-        "UPDATE federations SET name = ? WHERE id = ?",
-        federation.name,
-        federation.id,
+        "UPDATE federations SET name = ?, updated_at = NOW(), updated_by = ?, deleted = ? WHERE id = ?",
+        updatedFederation.name,
+        updatedFederation.updatedBy,
+        updatedFederation.deleted,
+        updatedFederation.id,
     )
-    return federation
+    return updatedFederation
   }
 
-  override fun Delete(id: Long) {
-    db.update("DELETE FROM federations WHERE id = ?", id)
+  override fun delete(id: Long) {
+    db.update(
+        "UPDATE federations SET deleted = true, updated_at = NOW(), updated_by = ? WHERE id = ?",
+        1, // TODO: заменить на реального пользователя
+        id
+    )
   }
 }

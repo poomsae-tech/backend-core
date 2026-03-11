@@ -4,23 +4,23 @@ import org.springframework.stereotype.Service
 
 @Service
 class FederationManager(private val federationRepo: FederationRepo) : FederationService {
-  override fun Get(id: Long): Federation? {
-    return federationRepo.Get(id)
+  override fun get(id: Long): Federation? {
+    return federationRepo.get(id)
   }
 
-  override fun GetMany(): List<Federation> {
-    return federationRepo.GetMany()
+  override fun getMany(): List<Federation> {
+    return federationRepo.getMany()
   }
 
-  override fun Create(federation: Federation): Federation {
-    return federationRepo.Create(federation)
+  override fun create(federation: Federation): Federation {
+    return federationRepo.create(federation)
   }
 
-  override fun Update(federation: Federation): Federation {
-    return federationRepo.Update(federation)
+  override fun update(federation: Federation): Federation {
+    return federationRepo.update(federation)
   }
 
-  override fun Delete(id: Long) {
-    federationRepo.Delete(id)
+  override fun delete(id: Long) {
+    federationRepo.delete(id)
   }
 }
