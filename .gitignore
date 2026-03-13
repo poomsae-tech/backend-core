@@ -228,3 +228,5 @@ gradle-app.setting
 /.idea/git_toolbox_prj.xml
 
 .env
+
+.db
