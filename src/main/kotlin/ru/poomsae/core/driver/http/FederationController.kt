@@ -15,11 +15,11 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import ru.poomsae.core.domain.Federation
-import ru.poomsae.core.driver.http.dto.requests.CreateFederationRequest
-import ru.poomsae.core.driver.http.dto.requests.UpdateFederationRequest
+import ru.poomsae.core.driver.http.dto.requests.federation.CreateFederationRequest
+import ru.poomsae.core.driver.http.dto.requests.federation.UpdateFederationRequest
 import ru.poomsae.core.driver.http.dto.responses.FederationResponse
 import ru.poomsae.core.mapper.FederationMapper
-import ru.poomsae.core.service.FederationService
+import ru.poomsae.core.service.interfaces.FederationService
 
 @RestController
 @RequestMapping("/federations")
@@ -62,7 +62,7 @@ class FederationController(
     fun create(
       @RequestBody request: CreateFederationRequest
     ): ResponseEntity<FederationResponse> {
-      val federation = federationService.create(federationMapper.toEntity(request))
+      val federation: Federation = federationService.create(federationMapper.toEntity(request))
       return ResponseEntity.ok(federationMapper.toResponse(federation))
     }
 
@@ -72,7 +72,7 @@ class FederationController(
     fun update(
       @RequestBody request: UpdateFederationRequest
     ): ResponseEntity<FederationResponse> {
-      val federation = federationService.update(federationMapper.toEntity(request))
+      val federation: Federation = federationService.update(federationMapper.toEntity(request))
       return ResponseEntity.ok(federationMapper.toResponse(federation))
     }
 

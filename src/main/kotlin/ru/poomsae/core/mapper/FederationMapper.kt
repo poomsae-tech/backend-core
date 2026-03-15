@@ -1,10 +1,9 @@
 package ru.poomsae.core.mapper
 
 import org.mapstruct.Mapper
-import org.mapstruct.factory.Mappers
 import ru.poomsae.core.domain.Federation
-import ru.poomsae.core.driver.http.dto.requests.CreateFederationRequest
-import ru.poomsae.core.driver.http.dto.requests.UpdateFederationRequest
+import ru.poomsae.core.driver.http.dto.requests.federation.CreateFederationRequest
+import ru.poomsae.core.driver.http.dto.requests.federation.UpdateFederationRequest
 import ru.poomsae.core.driver.http.dto.responses.FederationResponse
 
 @Mapper(componentModel = "spring")
