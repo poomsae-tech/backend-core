@@ -1,4 +1,6 @@
-package ru.poomsae.core
+package ru.poomsae.core.service
+
+import ru.poomsae.core.domain.Federation
 
 interface FederationService {
   fun get(id: Long): Federation?

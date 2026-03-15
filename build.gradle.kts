@@ -9,7 +9,7 @@ plugins {
 
 group = "ru.poomsae"
 
-version = "0.0.1-SNAPSHOT"
+version = "0.0.1"
 
 description = "Core backend monolith for Poomsae Tech"
 
@@ -18,15 +18,16 @@ java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
 repositories { mavenCentral() }
 
 dependencies {
-  // implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-  implementation("org.springframework.boot:spring-boot-starter-jdbc")
+  implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
   implementation("org.springframework.boot:spring-boot-starter-flyway")
   implementation("org.flywaydb:flyway-database-postgresql")
 
   implementation("org.springframework.boot:spring-boot-starter-web")
   implementation("org.jetbrains.kotlin:kotlin-reflect")
   implementation("tools.jackson.module:jackson-module-kotlin")
-  
+
+  implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2")
+
   implementation("org.mapstruct:mapstruct:1.6.3")
   kapt("org.mapstruct:mapstruct-processor:1.6.3")
 
@@ -50,13 +51,3 @@ allOpen {
 
 tasks.withType<Test> { useJUnitPlatform() }
 
-tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
-  val envFile = file(".env")
-  if (envFile.exists()) {
-    envFile
-        .readLines()
-        .filter { it.isNotBlank() && !it.startsWith("#") }
-        .map { it.split("=", limit = 2) }
-        .forEach { (key, value) -> environment(key, value) }
-  }
-}

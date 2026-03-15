@@ -1,4 +1,4 @@
-package ru.poomsae.core
+package ru.poomsae.core.utils.filter
 
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
