@@ -11,5 +11,7 @@ data class CreateOrganizationRequest(
     @Schema(description = "ИНН клуба", example = "7701123456")
     val inn: String,
     @Schema(description = "Адрес клуба", example = "г. Москва, ул. Спортивная, д. 10, стр. 2")
-    val address: String
+    val address: String,
+    @Schema(description = "ID федерации", example = "1")
+    val federationId: Long
 )

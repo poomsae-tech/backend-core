@@ -30,15 +30,15 @@ class OrganizationController(
 ) {
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    @GetMapping("/{organization_id}")
+    @GetMapping("/{id}")
     @Operation(summary = "Получить клуб по ID")
     @ApiResponse(responseCode = "200", description = "Клуб найден")
     @ApiResponse(responseCode = "204", description = "Клуб не найден")
     fun get(
         @Parameter(description = "")
-        @PathVariable organization_id: Long
+        @PathVariable id: Long
     ): ResponseEntity<OrganizationResponse> {
-        val organization = organizationServise.get(organization_id)
+        val organization = organizationServise.get(id)
 
         requireNotNull(organization) {
             return ResponseEntity.notFound().build()
@@ -76,14 +76,14 @@ class OrganizationController(
         return ResponseEntity.ok(organizationMapper.toResponse(organization))
     }
 
-    @DeleteMapping("/{organization_id}")
+    @DeleteMapping("/{id}")
     @Operation(summary = "Удалить клуб")
     @ApiResponse(responseCode = "204", description = "Клуб удален")
     fun delete(
         @Parameter(description = "ID клуба")
-        @PathVariable organization_id: Long
+        @PathVariable id: Long
     ): ResponseEntity<Unit> {
-        organizationServise.delete(organization_id)
+        organizationServise.delete(id)
         return ResponseEntity.noContent().build()
     }
 }

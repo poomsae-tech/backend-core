@@ -14,6 +14,8 @@ data class UpdateOrganizationRequest(
     val inn: String,
     @Schema(description = "Адрес клуба", example = "г. Москва, ул. Спортивная, д. 10, стр. 2")
     val address: String,
-    @Schema(description = "Флаг удаления", example = "false")
-    val deleted: Boolean
+    @Schema(description = "ID федерации", example = "1")
+    val federationId: Long,
+    @Schema(description = "Статус клуба", example = "ACCREDITED")
+    val status: String? = null
 )

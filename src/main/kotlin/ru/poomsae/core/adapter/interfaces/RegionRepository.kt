@@ -1,4 +1,4 @@
-package ru.poomsae.core.adapter.interfaces.repository
+package ru.poomsae.core.adapter.interfaces
 
 import ru.poomsae.core.domain.Region
 

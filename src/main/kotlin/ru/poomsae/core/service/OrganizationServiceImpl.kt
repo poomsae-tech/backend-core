@@ -1,7 +1,7 @@
 package ru.poomsae.core.service
 
 import org.springframework.stereotype.Service
-import ru.poomsae.core.adapter.interfaces.repository.OrganizationRepository
+import ru.poomsae.core.adapter.interfaces.OrganizationRepository
 import ru.poomsae.core.domain.Organization
 import ru.poomsae.core.service.interfaces.OrganizationService
 

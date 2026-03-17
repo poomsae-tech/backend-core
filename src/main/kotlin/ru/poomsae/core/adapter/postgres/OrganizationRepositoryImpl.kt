@@ -1,12 +1,12 @@
 package ru.poomsae.core.adapter.postgres
 
 import java.time.Instant
-import org.springframework.jdbc.core.BeanPropertyRowMapper
+import org.springframework.jdbc.core.DataClassRowMapper
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.support.GeneratedKeyHolder
 import org.springframework.jdbc.support.KeyHolder
 import org.springframework.stereotype.Repository
-import ru.poomsae.core.adapter.interfaces.repository.OrganizationRepository
+import ru.poomsae.core.adapter.interfaces.OrganizationRepository
 import ru.poomsae.core.domain.Organization
 
 @Repository
@@ -14,7 +14,7 @@ class OrganizationRepositoryImpl(
     private val db: JdbcTemplate
 ) : OrganizationRepository {
 
-    private val rowMapper = BeanPropertyRowMapper(Organization::class.java)
+    private val rowMapper = DataClassRowMapper(Organization::class.java)
 
     override fun get(id: Long): Organization? {
         return db.query(

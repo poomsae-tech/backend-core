@@ -2,11 +2,12 @@ package ru.poomsae.core.adapter.postgres
 
 import java.time.Instant
 import org.springframework.jdbc.core.BeanPropertyRowMapper
+import org.springframework.jdbc.core.DataClassRowMapper
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.support.GeneratedKeyHolder
 import org.springframework.jdbc.support.KeyHolder
 import org.springframework.stereotype.Repository
-import ru.poomsae.core.adapter.interfaces.repository.FederationRepository
+import ru.poomsae.core.adapter.interfaces.FederationRepository
 import ru.poomsae.core.domain.Federation
 
 @Repository
@@ -14,7 +15,7 @@ class FederationRepositoryImpl(
     private val db: JdbcTemplate
 ) : FederationRepository {
 
-  private val rowMapper = BeanPropertyRowMapper(Federation::class.java)
+  private val rowMapper = DataClassRowMapper(Federation::class.java)
 
   override fun get(id: Long): Federation? {
     return db.query(

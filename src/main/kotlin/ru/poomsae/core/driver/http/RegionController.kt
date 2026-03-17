@@ -22,23 +22,23 @@ import ru.poomsae.core.mapper.RegionMapper
 import ru.poomsae.core.service.interfaces.RegionService
 
 @RestController
-@RequestMapping("/region")
-@Tag(name = "Federation", description = "API для управления регионами")
+@RequestMapping("/regions")
+@Tag(name = "Region", description = "API для управления регионами")
 class RegionController(
     private val regionService: RegionService,
     private val regionMapper: RegionMapper
 ) {
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    @GetMapping("/{region_id}")
+    @GetMapping("/{id}")
     @Operation(summary = "Получить регион по ID")
     @ApiResponse(responseCode = "200", description = "Регион найдена")
     @ApiResponse(responseCode = "404", description = "Регион не найдена")
     fun get(
         @Parameter(description = "ID федерации")
-        @PathVariable region_id: Long
+        @PathVariable id: Long
     ): ResponseEntity<RegionResponse> {
-        val region = regionService.get(region_id)
+        val region = regionService.get(id)
 
         requireNotNull(region) {
             return ResponseEntity.notFound().build()
@@ -76,14 +76,14 @@ class RegionController(
         return ResponseEntity.ok(regionMapper.toResponse(federation))
     }
 
-    @DeleteMapping("/{region_id}")
+    @DeleteMapping("/{id}")
     @Operation(summary = "Удалить регион")
     @ApiResponse(responseCode = "204", description = "Регион удален")
     fun delete(
         @Parameter(description = "ID федерации")
-        @PathVariable region_id: Long
+        @PathVariable id: Long
     ): ResponseEntity<Unit> {
-        regionService.delete(region_id)
+        regionService.delete(id)
         return ResponseEntity.noContent().build()
     }
 }

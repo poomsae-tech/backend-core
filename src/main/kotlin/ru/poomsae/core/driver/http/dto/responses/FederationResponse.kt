@@ -9,6 +9,10 @@ data class FederationResponse(
     val id: Long,
     @Schema(description = "Название федерации", example = "Российская федерация тхэквондо")
     val name: String,
+    @Schema(description = "Тип федерации", example = "ALL_RUSSIAN")
+    val federationType: String,
+    @Schema(description = "ID региона", example = "1")
+    val regionId: Long,
     @Schema(description = "Флаг удаления", example = "false")
     val deleted: Boolean,
     @Schema(description = "Дата создания", example = "2026-03-15T10:00:00Z")

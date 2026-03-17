@@ -1,20 +1,22 @@
-package ru.poomsae.core.adapter.repository.region
+package ru.poomsae.core.adapter.postgres
 
 import java.time.Instant
 import org.springframework.jdbc.core.BeanPropertyRowMapper
+import org.springframework.jdbc.core.DataClassRowMapper
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.support.GeneratedKeyHolder
 import org.springframework.jdbc.support.KeyHolder
 import org.springframework.stereotype.Repository
-import ru.poomsae.core.adapter.interfaces.repository.RegionRepository
+import ru.poomsae.core.adapter.interfaces.RegionRepository
 import ru.poomsae.core.domain.Region
+import java.sql.Timestamp
 
 @Repository
-class PostgresRegionRepository(
+class RegionRepositoryImpl(
     private val db: JdbcTemplate
 ) : RegionRepository {
 
-    private val rowMapper = BeanPropertyRowMapper(Region::class.java)
+    private val rowMapper = DataClassRowMapper(Region::class.java)
 
     override fun get(id: Long): Region? {
         return db.query(
@@ -72,7 +74,7 @@ class PostgresRegionRepository(
             arrayOf("id"))
 
             ps.setString(1, createdRegion.name)
-            ps.setTimestamp(2, java.sql.Timestamp.from(createdRegion.createdAt))
+            ps.setTimestamp(2, Timestamp.from(createdRegion.createdAt))
             ps.setLong(3, createdRegion.createdBy)
             ps.setBoolean(4, createdRegion.deleted)
             ps

@@ -5,20 +5,20 @@ import java.time.Instant
 
 @Schema(description = "Ответ с данными клуба")
 data class OrganizationResponse(
-    @Schema(description = "", example = "")
+    @Schema(description = "ID клуба", example = "1")
     val id: Long,
-    @Schema(description = "", example = "")
+    @Schema(description = "Название клуба", example = "Спортивный клуб тхэквондо 'ITF Master'")
     val name: String,
-    @Schema(description = "", example = "")
+    @Schema(description = "ИНН клуба", example = "7701123456")
     val inn: String,
-    @Schema(description = "", example = "")
+    @Schema(description = "Адрес клуба", example = "г. Москва, ул. Спортивная, д. 10, стр. 2")
     val address: String,
-    @Schema(description = "", example = "")
-    val status: Long,
-    @Schema(description = "", example = "")
-    val federationId: Long?,
-    @Schema(description = "", example = "")
-    val regionId: Long?,
+    @Schema(description = "Статус клуба", example = "PENDING")
+    val status: String,
+    @Schema(description = "ID федерации", example = "1")
+    val federationId: Long,
+    @Schema(description = "ID региона", example = "1")
+    val regionId: Long,
     @Schema(description = "Флаг удаления", example = "false")
     val deleted: Boolean,
     @Schema(description = "Дата создания", example = "2026-03-15T10:00:00Z")

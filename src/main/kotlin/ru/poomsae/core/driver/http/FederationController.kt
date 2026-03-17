@@ -30,15 +30,15 @@ class FederationController(
 ) {
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    @GetMapping("/{federation_id}")
+    @GetMapping("/{id}")
     @Operation(summary = "Получить федерацию по ID")
     @ApiResponse(responseCode = "200", description = "Федерация найдена")
     @ApiResponse(responseCode = "404", description = "Федерация не найдена")
     fun get(
       @Parameter(description = "ID федерации")
-      @PathVariable federation_id: Long
+      @PathVariable id: Long
     ): ResponseEntity<FederationResponse> {
-      val federation = federationService.get(federation_id)
+      val federation = federationService.get(id)
 
       requireNotNull(federation) {
         return ResponseEntity.notFound().build()
@@ -76,14 +76,14 @@ class FederationController(
       return ResponseEntity.ok(federationMapper.toResponse(federation))
     }
 
-    @DeleteMapping("/{federation_id}")
+    @DeleteMapping("/{id}")
     @Operation(summary = "Удалить федерацию")
     @ApiResponse(responseCode = "204", description = "Федерация удалена")
     fun delete(
       @Parameter(description = "ID федерации")
-      @PathVariable federation_id: Long
+      @PathVariable id: Long
     ): ResponseEntity<Unit> {
-      federationService.delete(federation_id)
+      federationService.delete(id)
       return ResponseEntity.noContent().build()
     }
 }
