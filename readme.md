@@ -62,17 +62,35 @@ Flyway миграции находятся в `src/main/resources/db/migration/`
 ./migrations.sh <migration_name>
 ```
 
-## API Endpoints
+## Seed Data (Тестовые данные)
 
-### Federation
+Для наполнения базы тестовыми данными используется скрипт `init-data.sql`.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/federations` | Получить все федерации |
-| GET | `/federations/{id}` | Получить федерацию по ID |
-| POST | `/federations` | Создать федерацию |
-| PUT | `/federations` | Обновить федерацию |
-| DELETE | `/federations/{id}` | Удалить федерацию (soft delete) |
+### Способ 1: Быстрое применение (рекомендуется)
+
+Применить скрипт к существующей базе:
+```bash
+cat init-data.sql | docker compose exec -T db psql -U admin -d core
+```
+
+### Способ 2: Автоматическое применение при старте БД
+
+Скрипт подключен к Docker Compose и выполняется автоматически при **первом** старте базы данных.
+
+Для повторной инициализации (если БД уже существовала):
+```bash
+docker compose down -v          # Удалить том с данными
+docker compose up -d            # Запустить БД (скрипт выполнится автоматически)
+```
+
+> **Важно:** Скрипты в `/docker-entrypoint-initdb.d/` выполняются только при первом старте на пустой базе.
+
+### Очистка данных
+
+Перед повторным импортом можно очистить таблицы:
+```bash
+docker compose exec -T db psql -U admin -d core -c "TRUNCATE TABLE federations, regions, organizations RESTART IDENTITY CASCADE;"
+```
 
 ## API Documentation
 

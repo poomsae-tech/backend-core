@@ -1,4 +1,4 @@
-package ru.poomsae.core.driver.http.dto.requests
+package ru.poomsae.core.driver.http.dto.requests.federation
 
 import io.swagger.v3.oas.annotations.media.Schema
 

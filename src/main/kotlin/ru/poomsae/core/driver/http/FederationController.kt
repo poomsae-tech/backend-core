@@ -15,11 +15,11 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import ru.poomsae.core.domain.Federation
-import ru.poomsae.core.driver.http.dto.requests.CreateFederationRequest
-import ru.poomsae.core.driver.http.dto.requests.UpdateFederationRequest
+import ru.poomsae.core.driver.http.dto.requests.federation.CreateFederationRequest
+import ru.poomsae.core.driver.http.dto.requests.federation.UpdateFederationRequest
 import ru.poomsae.core.driver.http.dto.responses.FederationResponse
 import ru.poomsae.core.mapper.FederationMapper
-import ru.poomsae.core.service.FederationService
+import ru.poomsae.core.service.interfaces.FederationService
 
 @RestController
 @RequestMapping("/federations")
@@ -30,15 +30,15 @@ class FederationController(
 ) {
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    @GetMapping("/{federation_id}")
+    @GetMapping("/{id}")
     @Operation(summary = "Получить федерацию по ID")
     @ApiResponse(responseCode = "200", description = "Федерация найдена")
     @ApiResponse(responseCode = "404", description = "Федерация не найдена")
     fun get(
       @Parameter(description = "ID федерации")
-      @PathVariable federation_id: Long
+      @PathVariable id: Long
     ): ResponseEntity<FederationResponse> {
-      val federation = federationService.get(federation_id)
+      val federation = federationService.get(id)
 
       requireNotNull(federation) {
         return ResponseEntity.notFound().build()
@@ -62,7 +62,7 @@ class FederationController(
     fun create(
       @RequestBody request: CreateFederationRequest
     ): ResponseEntity<FederationResponse> {
-      val federation = federationService.create(federationMapper.toEntity(request))
+      val federation: Federation = federationService.create(federationMapper.toEntity(request))
       return ResponseEntity.ok(federationMapper.toResponse(federation))
     }
 
@@ -72,18 +72,18 @@ class FederationController(
     fun update(
       @RequestBody request: UpdateFederationRequest
     ): ResponseEntity<FederationResponse> {
-      val federation = federationService.update(federationMapper.toEntity(request))
+      val federation: Federation = federationService.update(federationMapper.toEntity(request))
       return ResponseEntity.ok(federationMapper.toResponse(federation))
     }
 
-    @DeleteMapping("/{federation_id}")
+    @DeleteMapping("/{id}")
     @Operation(summary = "Удалить федерацию")
     @ApiResponse(responseCode = "204", description = "Федерация удалена")
     fun delete(
       @Parameter(description = "ID федерации")
-      @PathVariable federation_id: Long
+      @PathVariable id: Long
     ): ResponseEntity<Unit> {
-      federationService.delete(federation_id)
+      federationService.delete(id)
       return ResponseEntity.noContent().build()
     }
 }

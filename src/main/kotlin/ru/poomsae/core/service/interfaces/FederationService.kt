@@ -1,8 +1,8 @@
-package ru.poomsae.core.adapter.postgres
+package ru.poomsae.core.service.interfaces
 
 import ru.poomsae.core.domain.Federation
 
-interface FederationRepository {
+interface FederationService {
   fun get(id: Long): Federation?
 
   fun getMany(): List<Federation>

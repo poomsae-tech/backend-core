@@ -5,12 +5,15 @@ import org.springframework.data.relational.core.mapping.Table
 import java.time.Instant
 
 @Table
-data class Federation(
+data class Organization(
     @Id
     val id: Long? = null,
     var name: String,
+    var inn: String,
+    var address: String,
+    var status: OrganizationStatus = OrganizationStatus.PENDING,
+    var federationId: Long,
     var regionId: Long,
-    var federationType: FederationType,
 
     var deleted: Boolean = false,
     val createdAt: Instant = Instant.now(),
@@ -19,7 +22,7 @@ data class Federation(
     var updatedBy: Long? = null
 )
 
-enum class FederationType {
-    ALL_RUSSIAN,
-    REGIONAL
+enum class OrganizationStatus {
+    PENDING,
+    ACCREDITED,
 }

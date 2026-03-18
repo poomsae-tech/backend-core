@@ -2,10 +2,12 @@ package ru.poomsae.core.adapter.postgres
 
 import java.time.Instant
 import org.springframework.jdbc.core.BeanPropertyRowMapper
+import org.springframework.jdbc.core.DataClassRowMapper
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.support.GeneratedKeyHolder
 import org.springframework.jdbc.support.KeyHolder
 import org.springframework.stereotype.Repository
+import ru.poomsae.core.adapter.interfaces.FederationRepository
 import ru.poomsae.core.domain.Federation
 
 @Repository
@@ -13,41 +15,43 @@ class FederationRepositoryImpl(
     private val db: JdbcTemplate
 ) : FederationRepository {
 
-  private val rowMapper = BeanPropertyRowMapper(Federation::class.java)
+  private val rowMapper = DataClassRowMapper(Federation::class.java)
 
   override fun get(id: Long): Federation? {
     return db.query(
             """
-                SELECT
-                  id,
-                  name,
-                  created_at,
-                  created_by,
-                  updated_at,
-                  updated_by,
-                  deleted
+                SELECT id,
+                       name,
+                       region_id             AS regionId,
+                       federation_type::text AS federationType,
+                       created_at            AS createdAt,
+                       created_by            AS createdBy,
+                       updated_at            AS updatedAt,
+                       updated_by            AS updatedBy,
+                       deleted
                 FROM federations
-                WHERE id = ?
-                AND deleted = false""".trimIndent(),
+                WHERE id = ? AND deleted = false
+                """.trimIndent(),
             rowMapper,
             id,
-        )
-        .firstOrNull()
+        ).firstOrNull()
   }
 
   override fun getMany(): List<Federation> {
     return db.query(
         """
-            SELECT
-              id,
-              name,
-              created_at,
-              created_by,
-              updated_at,
-              updated_by,
-              deleted
+            SELECT id,
+                   name,
+                   region_id             AS regionId,
+                   federation_type::text AS federationType,
+                   created_at            AS createdAt,
+                   created_by            AS createdBy,
+                   updated_at            AS updatedAt,
+                   updated_by            AS updatedBy,
+                   deleted
             FROM federations
-            WHERE deleted = false""".trimIndent(),
+            WHERE deleted = false
+            """.trimIndent(),
         rowMapper,
     )
   }
@@ -64,22 +68,22 @@ class FederationRepositoryImpl(
         val ps = conn.prepareStatement(
             """
             INSERT INTO federations (
-              name,
-              created_at,
-              created_by,
-              deleted
-            ) VALUES (
-              ?,
-              ?,
-              ?,
-              ?
-            )""",
+                        name,
+                        region_id,
+                        federation_type,
+                        created_at,
+                        created_by,
+                        deleted
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
             arrayOf("id")
         )
         ps.setString(1, createdFederation.name)
-        ps.setTimestamp(2, java.sql.Timestamp.from(createdFederation.createdAt))
-        ps.setLong(3, createdFederation.createdBy)
-        ps.setBoolean(4, createdFederation.deleted)
+        ps.setLong(2, createdFederation.regionId)
+        ps.setString(3, createdFederation.federationType.name)
+        ps.setTimestamp(4, java.sql.Timestamp.from(createdFederation.createdAt))
+        ps.setLong(5, createdFederation.createdBy)
+        ps.setBoolean(6, createdFederation.deleted)
         ps
     }, keyHolder)
 
@@ -96,28 +100,35 @@ class FederationRepositoryImpl(
     
     db.update(
         """
-            UPDATE federations 
-            SET name = ?, 
-              updated_at = NOW(), 
-              updated_by = ?, 
-              deleted = ? 
-            WHERE id = ?""".trimIndent(),
+            UPDATE federations
+            SET name = ?,
+                region_id = ?,
+                federation_type = ?,
+                updated_at = NOW(),
+                updated_by = ?,
+                deleted = ?
+            WHERE id = ?
+            """.trimIndent(),
         updatedFederation.name,
+        updatedFederation.regionId,
+        updatedFederation.federationType.name,
         updatedFederation.updatedBy,
         updatedFederation.deleted,
-        updatedFederation.id,
+        updatedFederation.id
     )
+
     return updatedFederation
   }
 
   override fun delete(id: Long) {
     db.update(
         """
-            UPDATE federations 
+            UPDATE federations
             SET deleted = true,
-              updated_at = NOW(), 
-              updated_by = ? 
-            WHERE id = ?""",
+                updated_at = NOW(),
+                updated_by = ?
+            WHERE id = ?
+            """,
         1, // TODO: заменить на реального пользователя
         id
     )
