@@ -96,7 +96,7 @@ docker compose exec -T db psql -U admin -d core -c "TRUNCATE TABLE federations, 
 
 После запуска приложения Swagger UI доступен по адресу:
 - Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-- OpenAPI JSON: [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
+- OpenAPI JSON: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
 
 ## Configuration
 
