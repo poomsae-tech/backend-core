@@ -20,7 +20,7 @@ class SecurityConfig {
             .csrf { it.disable() }
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers("/actuator/health", "/api/public/**").permitAll()
+                    .requestMatchers("/actuator/health", "/api/public/**", "/swagger-ui.html", "/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                     .anyRequest().authenticated()
             }
             .oauth2ResourceServer { oauth2 ->

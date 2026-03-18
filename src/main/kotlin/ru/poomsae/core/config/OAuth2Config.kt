@@ -9,12 +9,12 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 @Configuration
 class OAuth2Config {
 
-    @Value("\${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
-    private lateinit var issuerUri: String
+    @Value("\${AUTHENTIK_JWK_URI}")
+    private lateinit var jwkSetUri: String
 
     @Bean
     fun jwtDecoder(): JwtDecoder {
-        return NimbusJwtDecoder.withJwkSetUri("\${issuerUri}/protocol/openid-connect/certs")
+        return NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
             .build()
     }
 }
