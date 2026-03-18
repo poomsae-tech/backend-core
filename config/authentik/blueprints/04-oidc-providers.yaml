@@ -36,7 +36,7 @@ entries:
         - url: "http://localhost:8080/login/oauth2/code/authentik"
           matching_mode: strict
       # Token lifetimes — Python timedelta kwargs (semicolon-separated)
-      access_token_validity: "minutes=5"
+      access_token_validity: "minutes=15"
       # 7 days: long enough for mobile/web sessions, not excessively long
       refresh_token_validity: "days=7"
       # Scope mappings resolved via !Find because they were created in 03-scope-mappings.yaml
@@ -71,7 +71,7 @@ entries:
           matching_mode: strict
         - url: "http://localhost:8081/auth/callback"
           matching_mode: strict
-      access_token_validity: "minutes=5"
+      access_token_validity: "minutes=15"
       refresh_token_validity: "days=7"
       property_mappings:
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]

@@ -70,11 +70,10 @@ entries:
       name: taekwondo-sms-verify-stage
       provider: generic
       account_sid: "https://smsc.ru/sys/send.php"
-      # !Env [VAR, default] — defaults to empty string when env var is not set.
       # Fill in SMSC_LOGIN / SMSC_PASSWORD / SMSC_SENDER in .env before going to production.
-      auth: !Env [SMSC_LOGIN, ""]
-      auth_password: !Env [SMSC_PASSWORD, ""]
-      from_number: !Env [SMSC_SENDER, "Taekwondo"]
+      auth: !Env [SMSC_LOGIN]
+      auth_password: !Env [SMSC_PASSWORD]
+      from_number: !Env [SMSC_SENDER]
       auth_type: bearer
       verify_only: true
       mapping: !Find [authentik_events.notificationwebhookmapping, [name, taekwondo-smsc-mapping]]
@@ -200,24 +199,8 @@ entries:
     attrs:
       name: taekwondo-enroll-athlete-write-stage
       user_creation_mode: always_create
-      create_users_as_inactive: true
+      create_users_as_inactive: false 
       create_users_group: !Find [authentik_core.group, [name, athlete]]
-
-  # Sends a "confirm your email" link that expires in 12 hours.
-  # activate_user_on_success: false — clicking the link does NOT activate the account;
-  # it only confirms email ownership. Coach activation is still required.
-  - model: authentik_stages_email.emailstage
-    id: enroll-athlete-email-stage
-    state: present
-    identifiers:
-      name: taekwondo-enroll-athlete-email-stage
-    attrs:
-      name: taekwondo-enroll-athlete-email-stage
-      use_global_settings: true
-      token_expiry: "hours=12"
-      subject: "Подтверждение регистрации — Тхэквондо"
-      template: email/account_confirmation.html
-      activate_user_on_success: false
 
   # ═══════════════════════════════════════════════
   # PROMPTS — Club Registration
@@ -357,21 +340,8 @@ entries:
     attrs:
       name: taekwondo-enroll-club-write-stage
       user_creation_mode: always_create
-      create_users_as_inactive: true
+      create_users_as_inactive: false 
       create_users_group: !Find [authentik_core.group, [name, org_admin]]
-
-  - model: authentik_stages_email.emailstage
-    id: enroll-club-email-stage
-    state: present
-    identifiers:
-      name: taekwondo-enroll-club-email-stage
-    attrs:
-      name: taekwondo-enroll-club-email-stage
-      use_global_settings: true
-      token_expiry: "hours=12"
-      subject: "Подтверждение заявки на регистрацию клуба — Тхэквондо"
-      template: email/account_confirmation.html
-      activate_user_on_success: false
 
   # ═══════════════════════════════════════════════
   # FLOW 4: Athlete Enrollment (self-registration)
