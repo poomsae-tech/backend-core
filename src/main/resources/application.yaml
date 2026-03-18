@@ -27,7 +27,7 @@ spring:
     base-url: ${AUTHENTIK_BASE_URL:http://localhost:9000}
 
   config:
-    import: "optional:file:.env"
+    import: "optional:file:.env[.properties]"
 
   springdoc:
     api-docs:
