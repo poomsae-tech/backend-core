@@ -1,0 +1,54 @@
+version: 1
+metadata:
+  name: Taekwondo - OIDC Scope Mappings
+  labels:
+    blueprints.goauthentik.io/description: "Custom JWT claim mappings (roles, org_id, judge_type)"
+
+# These scope mappings are referenced by name via !Find in 04-oidc-providers.yaml,
+# so this blueprint must be applied before provider registration.
+
+entries:
+  # ─────────────────────────────────────────────
+  # Claim: roles
+  # Array of role strings derived from the user's group attributes.
+  # ─────────────────────────────────────────────
+  - model: authentik_providers_oauth2.scopemapping
+    state: present
+    identifiers:
+      name: taekwondo-scope-roles
+    attrs:
+      name: taekwondo-scope-roles
+      scope_name: roles
+      description: "User roles derived from group membership"
+      expression: |
+        roles = []
+        for group in request.user.ak_groups.all():
+            role = group.attributes.get("role")
+            if role and role not in roles:
+                roles.append(role)
+        return {"roles": roles}
+
+  # ─────────────────────────────────────────────
+  # Claim: org (org_id + judge_type)
+  # org_id  — stored as a user attribute (set manually or via SCIM).
+  # judge_type — stored as a group attribute on judge groups.
+  # ─────────────────────────────────────────────
+  - model: authentik_providers_oauth2.scopemapping
+    state: present
+    identifiers:
+      name: taekwondo-scope-org
+    attrs:
+      name: taekwondo-scope-org
+      scope_name: org
+      description: "Organisation ID and judge sub-type"
+      expression: |
+        claims = {}
+        org_id = request.user.attributes.get("org_id")
+        if org_id:
+            claims["org_id"] = org_id
+        for group in request.user.ak_groups.all():
+            judge_type = group.attributes.get("judge_type")
+            if judge_type:
+                claims["judge_type"] = judge_type
+                break
+        return claims

@@ -227,6 +227,15 @@ gradle-app.setting
 /.idea/git_toolbox_blame.xml
 /.idea/git_toolbox_prj.xml
 
+# Authentik
+config/authentik/.env
+config/authentik/*.env.local
+config/authentik/*.env.production
+
+config/authentik/data/
+config/authentik/certs/
+config/authentik/media/
+
 .env
 
 .db

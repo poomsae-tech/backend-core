@@ -1,0 +1,151 @@
+version: 1
+metadata:
+  name: Taekwondo - Groups and Roles
+  labels:
+    blueprints.goauthentik.io/description: "Role hierarchy for taekwondo platform"
+
+# Role model:
+#   group.attributes.role        → JWT claim "roles" (array)
+#   group.attributes.judge_type  → JWT claim "judge_type" (judge groups only)
+#   group.attributes.permissions → consumed by the backend, not enforced by Authentik
+
+entries:
+  # ─────────────────────────────────────────────
+  # SUPERADMIN
+  # Full platform control, global settings, org banning.
+  # ─────────────────────────────────────────────
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: superadmin
+    attrs:
+      name: superadmin
+      is_superuser: true
+      attributes:
+        role: superadmin
+        permissions:
+          - platform:manage
+          - org:ban
+          - org:unban
+          - stats:global
+
+  # ─────────────────────────────────────────────
+  # FEDERATION REPRESENTATIVE
+  # Regional curator: accredits clubs, appoints main judges.
+  # ─────────────────────────────────────────────
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: federation_representative
+    attrs:
+      name: federation_representative
+      attributes:
+        role: federation_representative
+        permissions:
+          - org:accredit
+          - tournament:assign_main_judge
+          - stats:region
+          - secretariat:oversight
+
+  # ─────────────────────────────────────────────
+  # ORG ADMIN (Club Director)
+  # Manages own club staff and athletes, submits entries for the whole club.
+  # ─────────────────────────────────────────────
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: org_admin
+    attrs:
+      name: org_admin
+      attributes:
+        role: org_admin
+        permissions:
+          - org:manage_own
+          - coach:register
+          - athlete:register
+          - entry:submit_club
+          - stats:club
+
+  # ─────────────────────────────────────────────
+  # COACH
+  # Primary data operator: creates athlete profiles, submits entries.
+  # ─────────────────────────────────────────────
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: coach
+    attrs:
+      name: coach
+      attributes:
+        role: coach
+        permissions:
+          - athlete:create
+          - athlete:edit_own
+          - entry:submit_own
+          - stats:own_athletes
+
+  # ─────────────────────────────────────────────
+  # ATHLETE
+  # Read-only personal cabinet. Cannot self-register for tournaments.
+  # ─────────────────────────────────────────────
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: athlete
+    attrs:
+      name: athlete
+      attributes:
+        role: athlete
+        permissions:
+          - profile:read_own
+          - stats:personal
+
+  # ─────────────────────────────────────────────
+  # JUDGE — Main Judge (Chief Referee)
+  # Manages the full tournament process. Assigned per tournament by Federation Rep.
+  # ─────────────────────────────────────────────
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: judge_main
+    attrs:
+      name: judge_main
+      attributes:
+        role: judge
+        judge_type: main
+        permissions:
+          - tournament:manage_scoring
+          - tournament:manage_schedule
+
+  # ─────────────────────────────────────────────
+  # JUDGE — Corner Judge
+  # Operates scoring remote during a bout. Temporary, per-tournament role.
+  # ─────────────────────────────────────────────
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: judge_corner
+    attrs:
+      name: judge_corner
+      attributes:
+        role: judge
+        judge_type: corner
+        permissions:
+          - bout:score
+
+  # ─────────────────────────────────────────────
+  # JUDGE — Secretary (Weigh-in / Secretariat)
+  # Handles weigh-in and secretariat operations.
+  # ─────────────────────────────────────────────
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: judge_secretary
+    attrs:
+      name: judge_secretary
+      attributes:
+        role: judge
+        judge_type: secretary
+        permissions:
+          - weigh_in:manage
+          - secretariat:manage
