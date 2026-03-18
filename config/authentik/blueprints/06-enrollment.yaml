@@ -71,9 +71,9 @@ entries:
       provider: generic
       account_sid: "https://smsc.ru/sys/send.php"
       # Fill in SMSC_LOGIN / SMSC_PASSWORD / SMSC_SENDER in .env before going to production.
-      auth: "{{ lookup('env', 'SMSC_LOGIN') }}"
-      auth_password: "{{ lookup('env', 'SMSC_PASSWORD') }}"
-      from_number: "{{ lookup('env', 'SMSC_SENDER') }}"
+      auth: !Env SMSC_LOGIN 
+      auth_password: !Env SMSC_PASSWORD
+      from_number: !Env SMSC_SENDER
       auth_type: bearer
       verify_only: true
       mapping: !Find [authentik_events.notificationwebhookmapping, [name, taekwondo-smsc-mapping]]
