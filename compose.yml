@@ -3,12 +3,12 @@ services:
     restart: always
     image: postgres:17
     env_file:
-      - ./.env
+      - .env
+    environment:
+      PGUSER: ${CORE_POSTGRES_USER}
+      PGDATABASE: ${CORE_POSTGRES_DB}
     ports:
       - 5436:5432
-    environment:
-      PGUSER: ${POSTGRES_USER}
-      PGDATABASE: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -17,5 +17,70 @@ services:
       timeout: 5s
       retries: 5
 
+  authentik_db:
+    image: postgres:16-alpine
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${AUTHENTIK_PG_DB:-authentik}
+      POSTGRES_PASSWORD: ${AUTHENTIK_PG_PASS:?database password required}
+      POSTGRES_USER: ${AUTHENTIK_PG_USER:-authentik}
+    healthcheck:
+      interval: 30s
+      retries: 5
+      start_period: 20s
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      timeout: 5s
+    restart: unless-stopped
+    volumes:
+      - authentik_pgdata:/var/lib/postgresql/data
+
+  authentik_server:
+    command: server
+    depends_on:
+      authentik_db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+      AUTHENTIK_POSTGRESQL__HOST: authentik_db
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_PG_PASS}
+      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_PG_USER:-authentik}
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.2.0}
+    ports:
+      - ${AUTHENTIK_COMPOSE_PORT_HTTP:-9000}:9000
+      - ${AUTHENTIK_COMPOSE_PORT_HTTPS:-9443}:9443
+    restart: unless-stopped
+    shm_size: 512mb
+    volumes:
+      - ./config/authentik/data:/data
+      - ./config/authentik/custom-templates:/templates
+
+  authentik_worker:
+    command: worker
+    depends_on:
+      authentik_db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+      AUTHENTIK_POSTGRESQL__HOST: authentik_db
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_PG_PASS}
+      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_PG_USER:-authentik}
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.2.0}
+    restart: unless-stopped
+    shm_size: 512mb
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/authentik/data:/data
+      - ./config/authentik/certs:/certs
+      - ./config/authentik/custom-templates:/templates
+      - ./config/authentik/blueprints:/blueprints/custom
+
 volumes:
   pgdata:
+  authentik_pgdata:
