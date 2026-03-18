@@ -7,6 +7,9 @@ services:
     environment:
       PGUSER: ${CORE_POSTGRES_USER}
       PGDATABASE: ${CORE_POSTGRES_DB}
+      POSTGRES_DB: ${CORE_POSTGRES_DB}
+      POSTGRES_PASSWORD: ${CORE_POSTGRES_PASSWORD}
+      POSTGRES_USER: ${CORE_POSTGRES_USER}
     ports:
       - 5436:5432
     volumes:
@@ -16,15 +19,19 @@ services:
       interval: 1s
       timeout: 5s
       retries: 5
+    networks:
+      - core_network
 
   authentik_db:
     image: postgres:16-alpine
     env_file:
       - .env
     environment:
-      POSTGRES_DB: ${AUTHENTIK_PG_DB:-authentik}
-      POSTGRES_PASSWORD: ${AUTHENTIK_PG_PASS:?database password required}
-      POSTGRES_USER: ${AUTHENTIK_PG_USER:-authentik}
+      PGUSER: ${AUTHENTIK_PG_USER}
+      PGDATABASE: ${AUTHENTIK_PG_DB}
+      POSTGRES_DB: ${AUTHENTIK_PG_DB}
+      POSTGRES_PASSWORD: ${AUTHENTIK_PG_PASS}
+      POSTGRES_USER: ${AUTHENTIK_PG_USER}
     healthcheck:
       interval: 30s
       retries: 5
@@ -34,6 +41,8 @@ services:
     restart: unless-stopped
     volumes:
       - authentik_pgdata:/var/lib/postgresql/data
+    networks:
+      - authentik_network
 
   authentik_server:
     command: server
@@ -57,6 +66,8 @@ services:
     volumes:
       - ./config/authentik/data:/data
       - ./config/authentik/custom-templates:/templates
+    networks:
+      - authentik_network
 
   authentik_worker:
     command: worker
@@ -80,7 +91,13 @@ services:
       - ./config/authentik/certs:/certs
       - ./config/authentik/custom-templates:/templates
       - ./config/authentik/blueprints:/blueprints/custom
+    networks:
+      - authentik_network
 
 volumes:
   pgdata:
   authentik_pgdata:
+
+networks:
+  core_network:
+  authentik_network:

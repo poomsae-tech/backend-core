@@ -392,17 +392,6 @@ entries:
       stage: !KeyOf enroll-sms-stage
       order: 25
 
-  - model: authentik_flows.flowstagebinding
-    state: present
-    identifiers:
-      target: !KeyOf enroll-athlete-flow
-      stage: !KeyOf enroll-athlete-email-stage
-      order: 30
-    attrs:
-      target: !KeyOf enroll-athlete-flow
-      stage: !KeyOf enroll-athlete-email-stage
-      order: 30
-
   # ═══════════════════════════════════════════════
   # FLOW 5: Club Enrollment
   # ═══════════════════════════════════════════════
@@ -451,14 +440,3 @@ entries:
       target: !KeyOf enroll-club-flow
       stage: !KeyOf enroll-sms-stage
       order: 25
-
-  - model: authentik_flows.flowstagebinding
-    state: present
-    identifiers:
-      target: !KeyOf enroll-club-flow
-      stage: !KeyOf enroll-club-email-stage
-      order: 30
-    attrs:
-      target: !KeyOf enroll-club-flow
-      stage: !KeyOf enroll-club-email-stage
-      order: 30
