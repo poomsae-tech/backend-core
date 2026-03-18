@@ -64,7 +64,7 @@ services:
     restart: unless-stopped
     shm_size: 512mb
     volumes:
-      - ./config/authentik/data:/data
+      - authentik_data:/data
       - ./config/authentik/custom-templates:/templates
     networks:
       - authentik_network
@@ -87,8 +87,8 @@ services:
     shm_size: 512mb
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./config/authentik/data:/data
-      - ./config/authentik/certs:/certs
+      - authentik_data:/data
+      - authentik_certs:/certs
       - ./config/authentik/custom-templates:/templates
       - ./config/authentik/blueprints:/blueprints/custom
     networks:
@@ -97,6 +97,8 @@ services:
 volumes:
   pgdata:
   authentik_pgdata:
+  authentik_data:
+  authentik_certs:
 
 networks:
   core_network:
