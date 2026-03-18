@@ -1,0 +1,172 @@
+{% extends "base/skeleton.html" %}
+
+{% load i18n %}
+{% load static %}
+{% load authentik_core %}
+
+{# =============================================================
+   TAEKWONDO PLATFORM — Custom Flow Interface Template
+   For designer guidelines see: docs/designer-auth-forms.md
+
+   This file overrides /authentik/flows/templates/if/flow.html
+   for ALL flows (login, password change, password reset, etc.)
+
+   HOW TO DISABLE:
+   Rename this file to flow.html.disabled — Authentik will fall
+   back to the default UI automatically.
+   ============================================================= #}
+
+{% block head_before %}
+{{ block.super }}
+<link rel="prefetch" href="{{ flow_background_url }}" />
+{% if flow.compatibility_mode and not inspector %}
+<script data-id="shady-dom">
+    "use strict";
+    window.ShadyDOM = window.ShadyDOM || {}
+    window.ShadyDOM.force = true
+</script>
+{% endif %}
+{% include "base/header_js.html" %}
+<script data-id="flow-config">
+    "use strict";
+    window.authentik.flow = {
+        "layout": "{{ flow.layout }}",
+    };
+</script>
+<link rel="stylesheet" type="text/css" href="{% versioned_script 'dist/styles/static-%v.css' %}" />
+{% endblock %}
+
+{% block head %}
+<script src="{% versioned_script 'dist/flow/FlowInterface-%v.js' %}" type="module"></script>
+
+<style data-id="flow-css">
+  :root {
+      --ak-global--background-image: url("{{ flow_background_url }}");
+  }
+</style>
+
+{# ── Custom Taekwondo Branding ───────────────────────────────── #}
+<style data-id="taekwondo-brand">
+  /* ── Brand tokens — replace with your design system values ── */
+  :root {
+    --brand-primary:    #C0392B;   /* Red — taekwondo accent     */
+    --brand-secondary:  #1A1A2E;   /* Deep navy background       */
+    --brand-surface:    #16213E;   /* Card / panel surface       */
+    --brand-text:       #EAEAEA;   /* Primary text               */
+    --brand-muted:      #8892A4;   /* Placeholder / hint text    */
+    --brand-border:     #2D3561;   /* Input border               */
+    --brand-radius:     8px;
+    --brand-font:       'Inter', system-ui, sans-serif;
+  }
+
+  /* ── Page background ── */
+  .pf-c-login {
+    background-color: var(--brand-secondary) !important;
+    font-family: var(--brand-font);
+    --ak-global--background-image: none;
+    background-image: none !important;
+  }
+
+  /* ── Login card ── */
+  .pf-c-login__main,
+  ak-flow-executor::part(main),
+  .pf-c-card {
+    background: var(--brand-surface) !important;
+    border: 1px solid var(--brand-border) !important;
+    border-radius: var(--brand-radius) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  /* ── Title ── */
+  .pf-c-login__main-header,
+  .pf-c-title {
+    color: var(--brand-text) !important;
+  }
+
+  /* ── Form inputs ── */
+  .pf-c-form-control,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"] {
+    background: var(--brand-secondary) !important;
+    border: 1px solid var(--brand-border) !important;
+    border-radius: var(--brand-radius) !important;
+    color: var(--brand-text) !important;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+  }
+  .pf-c-form-control:focus,
+  input:focus {
+    border-color: var(--brand-primary) !important;
+    outline: none;
+  }
+
+  /* ── Labels ── */
+  .pf-c-form__label-text {
+    color: var(--brand-muted) !important;
+  }
+
+  /* ── Submit button ── */
+  .pf-m-primary {
+    background-color: var(--brand-primary) !important;
+    border-color: var(--brand-primary) !important;
+    border-radius: var(--brand-radius) !important;
+    color: #fff !important;
+    font-weight: 600;
+    transition: opacity 0.2s;
+  }
+  .pf-m-primary:hover { opacity: 0.88; }
+
+  /* ── Links ── */
+  a,
+  .pf-c-login__main-footer-links-item-link {
+    color: var(--brand-primary) !important;
+  }
+
+  /* ── Error / alert messages ── */
+  .pf-c-alert.pf-m-danger,
+  .pf-c-alert.pf-m-warning {
+    border-left: 3px solid var(--brand-primary) !important;
+    background: rgba(192, 57, 43, 0.08) !important;
+    border-radius: var(--brand-radius) !important;
+  }
+
+  /* ── Body text / descriptions ── */
+  p, .pf-c-login__main-body {
+    color: var(--brand-text) !important;
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<ak-skip-to-content></ak-skip-to-content>
+<ak-message-container></ak-message-container>
+
+<div class="pf-c-page__drawer">
+    <div class="pf-c-drawer pf-m-collapsed" id="flow-drawer">
+        <div class="pf-c-drawer__main">
+            <div class="pf-c-drawer__content">
+                <div class="pf-c-drawer__body">
+                    <ak-flow-executor
+                        slug="{{ flow.slug }}"
+                        class="pf-c-login"
+                        data-layout="{{ flow.layout|default:'stacked' }}"
+                        loading
+                    >
+                        {% include "base/placeholder.html" %}
+
+                        <ak-brand-links name="flow-links" slot="footer"></ak-brand-links>
+                    </ak-flow-executor>
+                </div>
+            </div>
+
+            <ak-flow-inspector
+                id="flow-inspector"
+                data-registration="lazy"
+                class="pf-c-drawer__panel pf-m-width-33"
+                slug="{{ flow.slug }}"
+            ></ak-flow-inspector>
+        </div>
+    </div>
+</div>
+{% endblock %}

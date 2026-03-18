@@ -1,9 +1,19 @@
 # Core
 
-## Project structure 
+Monolithic backend service for Poomsae Tech platform.
 
-Пока что используется вариация чистой архитектуры. Возможно, потом перейдем на модульную, но для этого надо хорошо понимать язык (чего у нас пока нет),
-а так же хорошо понимать домен (пока чего так же нет).
+## Tech Stack
+
+- Kotlin 2.2.21
+- Spring Boot 4.0.2
+- PostgreSQL 17
+- Flyway (migrations)
+- Spring JDBC (data access)
+- MapStruct (DTO mapping)
+
+## Project structure
+
+Используется вариация чистой архитектуры.
 
 ```
 backend-core/
@@ -17,6 +27,77 @@ backend-core/
 │  │  ├─ driver/ - здесь будут лежать все, с помощью чего обращаются к нашему сервису: http-роутер, grpc-роутер, сабскрайберы и т.д
 │  │  ├─ service/ - здесь лежит основная бизнес-логика
 │  │  ├─ CoreApplication.kt - стартовая точка приложения
-│  ├─ test/kotlin/ru/poomsae/core/ - вроде как тесты, автоматические нагенерило, пока не понял
+│  ├─ test/kotlin/ru/poomsae/core/ - тесты
 ├─ build.gradle.kts - так же файл конфигурации gradle, тут конфигурируются плагины и всякое такое
 ```
+
+## Prerequisites
+
+- Java 21
+- Docker и Docker Compose
+
+## Setup
+
+1. Создать файл `.env` на основе `.env.example`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Запустить PostgreSQL:
+   ```bash
+   docker compose up -d
+   ```
+
+3. Запустить приложение:
+   ```bash
+   ./gradlew bootRun
+   ```
+
+## Database Migrations
+
+Flyway миграции находятся в `src/main/resources/db/migration/`.
+
+Создать новую миграцию:
+```bash
+./migrations.sh <migration_name>
+```
+
+## Seed Data (Тестовые данные)
+
+Для наполнения базы тестовыми данными используется скрипт `init-data.sql`.
+
+### Способ 1: Быстрое применение (рекомендуется)
+
+Применить скрипт к существующей базе:
+```bash
+cat init-data.sql | docker compose exec -T db psql -U admin -d core
+```
+
+### Способ 2: Автоматическое применение при старте БД
+
+Скрипт подключен к Docker Compose и выполняется автоматически при **первом** старте базы данных.
+
+Для повторной инициализации (если БД уже существовала):
+```bash
+docker compose down -v          # Удалить том с данными
+docker compose up -d            # Запустить БД (скрипт выполнится автоматически)
+```
+
+> **Важно:** Скрипты в `/docker-entrypoint-initdb.d/` выполняются только при первом старте на пустой базе.
+
+### Очистка данных
+
+Перед повторным импортом можно очистить таблицы:
+```bash
+docker compose exec -T db psql -U admin -d core -c "TRUNCATE TABLE federations, regions, organizations RESTART IDENTITY CASCADE;"
+```
+
+## API Documentation
+
+После запуска приложения Swagger UI доступен по адресу:
+- Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- OpenAPI JSON: [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
+
+## Configuration
+
+Приложение конфигурируется через переменные окружения (файл `.env`) и `application.yaml`.

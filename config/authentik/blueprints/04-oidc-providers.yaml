@@ -1,0 +1,111 @@
+version: 1
+metadata:
+  name: Taekwondo - OIDC Providers & Applications
+  labels:
+    blueprints.goauthentik.io/description: "OAuth2/OIDC providers for web and mobile clients"
+    blueprints.goauthentik.io/depends-on: "Taekwondo - OIDC Scope Mappings"
+
+# IMPORTANT: Apply 03-scope-mappings.yaml BEFORE this file.
+# property_mappings uses !Find (DB lookup by name) — scope mappings must already exist.
+
+entries:
+  # ─────────────────────────────────────────────
+  # PROVIDER — Web Application (confidential client)
+  # Authorization Code flow. Stores client_secret server-side.
+  # ─────────────────────────────────────────────
+  - model: authentik_providers_oauth2.oauth2provider
+    id: web-provider
+    state: present
+    identifiers:
+      name: taekwondo-web-provider
+    attrs:
+      name: taekwondo-web-provider
+      client_type: confidential
+      client_id: taekwondo-web
+      # Loaded from .env → TAEKWONDO_WEB_CLIENT_SECRET
+      # Generate with: openssl rand -hex 32
+      client_secret: !Env TAEKWONDO_WEB_CLIENT_SECRET
+      # authorization_flow is REQUIRED. Using built-in implicit-consent flow
+      # (no extra consent screen — suitable for first-party internal apps).
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      # redirect_uris format since Authentik 2023.5+
+      redirect_uris:
+        - url: "http://localhost:3000/auth/callback"
+          matching_mode: strict
+        - url: "http://localhost:8080/login/oauth2/code/authentik"
+          matching_mode: strict
+      # Token lifetimes — Python timedelta kwargs (semicolon-separated)
+      access_token_validity: "minutes=15"
+      # 7 days: long enough for mobile/web sessions, not excessively long
+      refresh_token_validity: "days=7"
+      # Scope mappings resolved via !Find because they were created in 03-scope-mappings.yaml
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, profile]]
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, email]]
+        - !Find [authentik_providers_oauth2.scopemapping, [name, taekwondo-scope-roles]]
+        - !Find [authentik_providers_oauth2.scopemapping, [name, taekwondo-scope-org]]
+      sub_mode: hashed_user_id
+      issuer_mode: global
+
+  # ─────────────────────────────────────────────
+  # PROVIDER — Mobile Application (public client, PKCE required)
+  # Authorization Code + PKCE. No client_secret.
+  # ─────────────────────────────────────────────
+  - model: authentik_providers_oauth2.oauth2provider
+    id: mobile-provider
+    state: present
+    identifiers:
+      name: taekwondo-mobile-provider
+    attrs:
+      name: taekwondo-mobile-provider
+      client_type: public
+      client_id: taekwondo-mobile
+      # Public clients do not use a client_secret.
+      # PKCE (code_challenge_method=S256) must be enforced on the client side.
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      redirect_uris:
+        - url: "taekwondo://auth/callback"
+          matching_mode: strict
+        - url: "http://localhost:8081/auth/callback"
+          matching_mode: strict
+      access_token_validity: "minutes=15"
+      refresh_token_validity: "days=7"
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, profile]]
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, email]]
+        - !Find [authentik_providers_oauth2.scopemapping, [name, taekwondo-scope-roles]]
+        - !Find [authentik_providers_oauth2.scopemapping, [name, taekwondo-scope-org]]
+      sub_mode: hashed_user_id
+      issuer_mode: global
+
+  # ─────────────────────────────────────────────
+  # APPLICATION — Web
+  # ─────────────────────────────────────────────
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: taekwondo-web
+    attrs:
+      name: Taekwondo Web
+      slug: taekwondo-web
+      provider: !KeyOf web-provider
+      meta_description: "Taekwondo platform — web client"
+      policy_engine_mode: any
+
+  # ─────────────────────────────────────────────
+  # APPLICATION — Mobile
+  # ─────────────────────────────────────────────
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: taekwondo-mobile
+    attrs:
+      name: Taekwondo Mobile
+      slug: taekwondo-mobile
+      provider: !KeyOf mobile-provider
+      meta_description: "Taekwondo platform — mobile client (PKCE)"
+      policy_engine_mode: any
