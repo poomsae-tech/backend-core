@@ -350,11 +350,11 @@ Admin UI (http://localhost:9000/if/admin/) → **Directory → Users → Create*
 ```bash
 # Получить токен через Authorization Code flow (через браузер)
 # Открыть URL в браузере:
-# http://localhost:9000/application/o/authorize/?
-#   client_id=taekwondo-web&
-#   response_type=code&
-#   redirect_uri=http://localhost:8080/login/oauth2/code/authentik&
-#   scope=openid+profile+email+roles+org
+ http://localhost:9000/application/o/authorize/?
+   client_id=taekwondo-web&
+   response_type=code&
+   redirect_uri=http://localhost:8080/login/oauth2/code/authentik&
+   scope=openid+profile+email+roles+org
 
 # После редиректа взять code= из URL и обменять на токен:
 curl -X POST http://localhost:9000/application/o/token/ \

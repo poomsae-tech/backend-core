@@ -18,6 +18,9 @@ java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
 repositories { mavenCentral() }
 
 dependencies {
+  implementation("org.springframework.boot:spring-boot-starter-security")
+  implementation("org.springframework.security:spring-security-oauth2-resource-server")
+  implementation("org.springframework.security:spring-security-oauth2-jose")
   implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
   implementation("org.springframework.boot:spring-boot-starter-flyway")
   implementation("org.flywaydb:flyway-database-postgresql")
@@ -33,6 +36,7 @@ dependencies {
 
   runtimeOnly("org.postgresql:postgresql")
   testImplementation("org.springframework.boot:spring-boot-starter-test")
+  testImplementation("org.springframework.security:spring-security-test")
   testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

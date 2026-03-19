@@ -71,9 +71,9 @@ entries:
       provider: generic
       account_sid: "https://smsc.ru/sys/send.php"
       # Fill in SMSC_LOGIN / SMSC_PASSWORD / SMSC_SENDER in .env before going to production.
-      auth: !Env [SMSC_LOGIN]
-      auth_password: !Env [SMSC_PASSWORD]
-      from_number: !Env [SMSC_SENDER]
+      auth: !Env SMSC_LOGIN 
+      auth_password: !Env SMSC_PASSWORD
+      from_number: !Env SMSC_SENDER
       auth_type: bearer
       verify_only: true
       mapping: !Find [authentik_events.notificationwebhookmapping, [name, taekwondo-smsc-mapping]]
@@ -392,17 +392,6 @@ entries:
       stage: !KeyOf enroll-sms-stage
       order: 25
 
-  - model: authentik_flows.flowstagebinding
-    state: present
-    identifiers:
-      target: !KeyOf enroll-athlete-flow
-      stage: !KeyOf enroll-athlete-email-stage
-      order: 30
-    attrs:
-      target: !KeyOf enroll-athlete-flow
-      stage: !KeyOf enroll-athlete-email-stage
-      order: 30
-
   # ═══════════════════════════════════════════════
   # FLOW 5: Club Enrollment
   # ═══════════════════════════════════════════════
@@ -451,14 +440,3 @@ entries:
       target: !KeyOf enroll-club-flow
       stage: !KeyOf enroll-sms-stage
       order: 25
-
-  - model: authentik_flows.flowstagebinding
-    state: present
-    identifiers:
-      target: !KeyOf enroll-club-flow
-      stage: !KeyOf enroll-club-email-stage
-      order: 30
-    attrs:
-      target: !KeyOf enroll-club-flow
-      stage: !KeyOf enroll-club-email-stage
-      order: 30

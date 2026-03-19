@@ -24,7 +24,7 @@ entries:
       client_id: taekwondo-web
       # Loaded from .env → TAEKWONDO_WEB_CLIENT_SECRET
       # Generate with: openssl rand -hex 32
-      client_secret: !Env TAEKWONDO_WEB_CLIENT_SECRET
+      client_secret: !Env AUTHENTIK_TAEKWONDO_WEB_CLIENT_SECRET 
       # authorization_flow is REQUIRED. Using built-in implicit-consent flow
       # (no extra consent screen — suitable for first-party internal apps).
       authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
