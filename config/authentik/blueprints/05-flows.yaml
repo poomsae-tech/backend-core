@@ -3,6 +3,7 @@ metadata:
   name: Taekwondo - Authentication Flows
   labels:
     blueprints.goauthentik.io/description: "Login, password change and password reset flows"
+    blueprints.goauthentik.io/depends-on: "Taekwondo - Enrollment Flows"
 
 # Flow overview:
 #   taekwondo-login           → deny (rate-limit gate) → identification → password → session
@@ -30,19 +31,6 @@ entries:
     attrs:
       name: taekwondo-deny-stage
 
-  # Blocks IPs / usernames that accumulated too many failed login attempts.
-  # threshold: -5 → IP must fail 5 times before being blocked.
-  - model: authentik_policies_reputation.reputationpolicy
-    id: login-reputation-policy
-    state: present
-    identifiers:
-      name: taekwondo-reputation-policy
-    attrs:
-      name: taekwondo-reputation-policy
-      check_ip: true
-      check_username: true
-      threshold: -5
-
   - model: authentik_stages_identification.identificationstage
     id: login-identification-stage
     state: present
@@ -55,6 +43,8 @@ entries:
         - username
       # Do not reveal whether the account exists — same error for unknown user
       pretend_user_exists: true
+      enrollment_flow: !Find [authentik_flows.flow, [slug, taekwondo-enroll-athlete]]
+      recovery_flow: !Find [authentik_flows.flow, [slug, taekwondo-password-reset]] 
 
   - model: authentik_stages_password.passwordstage
     id: login-password-stage
@@ -67,6 +57,20 @@ entries:
         - authentik.core.auth.InbuiltBackend
       # Cancel the flow after 5 failed attempts to prevent brute-force
       failed_attempts_before_cancel: 5
+
+  # Blocks IPs / usernames that accumulated too many failed login attempts.
+  # threshold: 5 → IP must fail 5 times before being blocked.
+  - model: authentik_policies_reputation.reputationpolicy
+    id: login-reputation-policy
+    state: present
+    identifiers:
+      name: taekwondo-reputation-policy
+    attrs:
+      name: taekwondo-reputation-policy
+      check_ip: true
+      check_username: true
+      threshold: -5
+
 
   - model: authentik_stages_user_login.userloginstage
     id: login-session-stage
@@ -239,11 +243,12 @@ entries:
     identifiers:
       target: !KeyOf login-flow
       stage: !KeyOf login-deny-stage
-      order: 5
+      order: 30 
     attrs:
       target: !KeyOf login-flow
       stage: !KeyOf login-deny-stage
-      order: 5
+      order: 30 
+      re_evaluate_policies: true
 
   - model: authentik_flows.flowstagebinding
     state: present
