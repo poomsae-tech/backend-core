@@ -33,7 +33,7 @@ class OrganizationController(
     @GetMapping("/{id}")
     @Operation(summary = "Получить клуб по ID")
     @ApiResponse(responseCode = "200", description = "Клуб найден")
-    @ApiResponse(responseCode = "204", description = "Клуб не найден")
+    @ApiResponse(responseCode = "404", description = "Клуб не найден")
     fun get(
         @Parameter(description = "")
         @PathVariable id: Long
