@@ -31,7 +31,10 @@ class OrganizationController(
     private val log = LoggerFactory.getLogger(this::class.java)
 
     @GetMapping("/{id}")
-    @Operation(summary = "Получить клуб по ID")
+    @Operation(
+        summary = "Получить клуб по ID",
+        operationId = "getOrganization"
+    )
     @ApiResponse(responseCode = "200", description = "Клуб найден")
     @ApiResponse(responseCode = "204", description = "Клуб не найден")
     fun get(
@@ -48,7 +51,10 @@ class OrganizationController(
     }
 
     @GetMapping
-    @Operation(summary = "Получить все клубы")
+    @Operation(
+        summary = "Получить все клубы",
+        operationId = "getAllOrganizations"
+    )
     @ApiResponse(responseCode = "200", description = "Список клубов")
     fun getMany(): ResponseEntity<List<OrganizationResponse>> {
         val organizations: List<Organization> = organizationServise.getMany()
@@ -57,7 +63,10 @@ class OrganizationController(
     }
 
     @PostMapping
-    @Operation(summary = "Создать клуб")
+    @Operation(
+        summary = "Создать клуб",
+        operationId = "createOrganization"
+    )
     @ApiResponse(responseCode = "200", description = "Клуб создан")
     fun create(
         @RequestBody request: CreateOrganizationRequest
@@ -67,7 +76,10 @@ class OrganizationController(
     }
 
     @PutMapping
-    @Operation(summary = "Обновить клуб")
+    @Operation(
+        summary = "Обновить клуб",
+        operationId = "updateOrganization"
+    )
     @ApiResponse(responseCode = "200", description = "Клуб обновлен")
     fun update(
         @RequestBody request: UpdateOrganizationRequest
@@ -77,7 +89,10 @@ class OrganizationController(
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Удалить клуб")
+    @Operation(
+        summary = "Удалить клуб",
+        operationId = "deleteOrganization"
+    )
     @ApiResponse(responseCode = "204", description = "Клуб удален")
     fun delete(
         @Parameter(description = "ID клуба")

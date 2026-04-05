@@ -31,7 +31,10 @@ class FederationController(
     private val log = LoggerFactory.getLogger(this::class.java)
 
     @GetMapping("/{id}")
-    @Operation(summary = "Получить федерацию по ID")
+    @Operation(
+        summary = "Получить федерацию по ID",
+        operationId = "getFederation"
+    )
     @ApiResponse(responseCode = "200", description = "Федерация найдена")
     @ApiResponse(responseCode = "404", description = "Федерация не найдена")
     fun get(
@@ -48,7 +51,10 @@ class FederationController(
     }
 
     @GetMapping
-    @Operation(summary = "Получить все федерации")
+    @Operation(
+        summary = "Получить все федерации",
+        operationId = "getAllFederations"
+    )
     @ApiResponse(responseCode = "200", description = "Список федераций")
     fun getMany(): ResponseEntity<List<FederationResponse>> {
       val federations: List<Federation> = federationService.getMany()
@@ -57,7 +63,10 @@ class FederationController(
     }
 
     @PostMapping
-    @Operation(summary = "Создать федерацию")
+    @Operation(
+        summary = "Создать федерацию",
+        operationId = "createFederation"
+    )
     @ApiResponse(responseCode = "200", description = "Федерация создана")
     fun create(
       @RequestBody request: CreateFederationRequest
@@ -67,7 +76,10 @@ class FederationController(
     }
 
     @PutMapping
-    @Operation(summary = "Обновить федерацию")
+    @Operation(
+        summary = "Обновить федерацию",
+        operationId = "updateFederation"
+    )
     @ApiResponse(responseCode = "200", description = "Федерация обновлена")
     fun update(
       @RequestBody request: UpdateFederationRequest
@@ -77,7 +89,10 @@ class FederationController(
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Удалить федерацию")
+    @Operation(
+        summary = "Удалить федерацию",
+        operationId = "deleteFederation"
+    )
     @ApiResponse(responseCode = "204", description = "Федерация удалена")
     fun delete(
       @Parameter(description = "ID федерации")
