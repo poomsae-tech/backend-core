@@ -31,7 +31,10 @@ class RegionController(
     private val log = LoggerFactory.getLogger(this::class.java)
 
     @GetMapping("/{id}")
-    @Operation(summary = "Получить регион по ID")
+    @Operation(
+        summary = "Получить регион по ID",
+        operationId = "getRegion"
+    )
     @ApiResponse(responseCode = "200", description = "Регион найдена")
     @ApiResponse(responseCode = "404", description = "Регион не найдена")
     fun get(
@@ -48,7 +51,10 @@ class RegionController(
     }
 
     @GetMapping
-    @Operation(summary = "Получить все регионы")
+    @Operation(
+        summary = "Получить все регионы",
+        operationId = "getAllRegions"
+    )
     @ApiResponse(responseCode = "200", description = "Список регионов")
     fun getMany(): ResponseEntity<List<RegionResponse>> {
         val federations: List<Region> = regionService.getMany()
@@ -57,7 +63,10 @@ class RegionController(
     }
 
     @PostMapping
-    @Operation(summary = "Создать регион")
+    @Operation(
+        summary = "Создать регион",
+        operationId = "createRegion"
+    )
     @ApiResponse(responseCode = "200", description = "Регион создан")
     fun create(
         @RequestBody request: CreateRegionRequest
@@ -67,7 +76,10 @@ class RegionController(
     }
 
     @PutMapping
-    @Operation(summary = "Обновить регион")
+    @Operation(
+        summary = "Обновить регион",
+        operationId = "updateRegion"
+    )
     @ApiResponse(responseCode = "200", description = "Регион обновлен")
     fun update(
         @RequestBody request: UpdateRegionRequest
@@ -77,7 +89,10 @@ class RegionController(
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Удалить регион")
+    @Operation(
+        summary = "Удалить регион",
+        operationId = "deleteRegion"
+    )
     @ApiResponse(responseCode = "204", description = "Регион удален")
     fun delete(
         @Parameter(description = "ID федерации")
